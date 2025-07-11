@@ -2,13 +2,11 @@ import streamlit as st
 import datetime
 import math
 
-st.set_page_config(page_title="CA Exam Planner", layout="centered")
+st.set_page_config(page_title="📘 CA Exam Planner", layout="centered")
 
-# ---------------- Title & Group Selection ----------------
 st.title("📚 CA Exam Planner")
 group = st.radio("Select the group you are preparing for:", ["Group I", "Group II", "Both Groups"])
 
-# ---------------- Exam Date Input ----------------
 exam_date = st.date_input("📅 Select your CA Exam Date", min_value=datetime.date.today())
 today = datetime.date.today()
 remaining_days = (exam_date - today).days
@@ -17,20 +15,20 @@ if remaining_days <= 0:
     st.warning("Please select a valid future date for the exam.")
     st.stop()
 
-# ---------------- Subject & Chapter Data ----------------
+# ---------- Subject and Chapter Data (Full Final Version) ----------
 subjects_data = {
     "Group I": {
         "Advance Accounting": [
-        "Accounting Policies (AS-1)", "Valuation of Inventories (AS-2)", "Cash Flow Statements (AS-3)",
-        "Contingencies & Events after BS date (AS-4)", "Net Profits (AS-5)", "Construction Contracts (AS-7)",
-        "Revenue Recognition (AS-9)", "PPE (AS-10)", "Foreign Exchange (AS-11)", "Government Grants (AS-12)",
-        "Investment Accounts (AS-13)", "Amalgamation of Companies (AS-14)", "Retirement Benefits (AS-15)",
-        "Borrowing Cost (AS-16)", "Segment Reporting (AS-17)", "Related Party Disclosures (AS-18)",
-        "Lease Accounting (AS-19)", "Earning Per Share (AS-20)", "Consolidation of Accounts (AS-21)",
-        "Accounting for Taxes on Income (AS-22)", "Associates (AS-23)", "Discontinuing Operation (AS-24)",
-        "Interim Financial Reporting (AS-25)", "Intangible Assets (AS-26)", "Joint Ventures (AS-27)",
-        "Impairment of Assets (AS-28)", "Provisions & Contingent Liability (AS-29)",
-        "Branch Accounting", "Buy Back of Shares", "Company Final Accounts", "Internal Reconstruction", "Schedule III"
+            "Accounting Policies (AS-1)", "Valuation of Inventories (AS-2)", "Cash Flow Statements (AS-3)",
+            "Contingencies & Events after BS date (AS-4)", "Net Profits (AS-5)", "Construction Contracts (AS-7)",
+            "Revenue Recognition (AS-9)", "PPE (AS-10)", "Foreign Exchange (AS-11)", "Government Grants (AS-12)",
+            "Investment Accounts (AS-13)", "Amalgamation of Companies (AS-14)", "Retirement Benefits (AS-15)",
+            "Borrowing Cost (AS-16)", "Segment Reporting (AS-17)", "Related Party Disclosures (AS-18)",
+            "Lease Accounting (AS-19)", "Earning Per Share (AS-20)", "Consolidation of Accounts (AS-21)",
+            "Accounting for Taxes on Income (AS-22)", "Associates (AS-23)", "Discontinuing Operation (AS-24)",
+            "Interim Financial Reporting (AS-25)", "Intangible Assets (AS-26)", "Joint Ventures (AS-27)",
+            "Impairment of Assets (AS-28)", "Provisions & Contingent Liability (AS-29)",
+            "Branch Accounting", "Buy Back of Shares", "Company Final Accounts", "Internal Reconstruction", "Schedule III"
         ],
         "Corporate and Other Laws": [
             "Preliminary", "Incorporation of Company & Matters Incidental Thereto",
@@ -95,42 +93,53 @@ subjects_data = {
     }
 }
 
-# ---------------- Chapter Collection Logic ----------------
-selected_subjects = {}
+# -------- Group-wise Subject Load --------
 if group == "Group I":
-    selected_subjects = subjects_data["Group I"]
+    selected_subjects_data = subjects_data["Group I"]
 elif group == "Group II":
-    selected_subjects = subjects_data["Group II"]
+    selected_subjects_data = subjects_data["Group II"]
 else:
-    selected_subjects = {**subjects_data["Group I"], **subjects_data["Group II"]}
+    selected_subjects_data = {**subjects_data["Group I"], **subjects_data["Group II"]}
 
-# Max 6 subject condition
-if len(selected_subjects) > 6:
-    st.error("⚠️ You can only select up to 6 subjects.")
+# -------- Subject Selection (Max 6) --------
+st.subheader("✅ Select Subjects You Want to Study (Max 6)")
+subject_options = list(selected_subjects_data.keys())
+chosen_subjects = st.multiselect("Choose subjects:", subject_options)
+
+if len(chosen_subjects) > 6:
+    st.error("You can select up to 6 subjects only.")
+    st.stop()
+elif len(chosen_subjects) == 0:
+    st.warning("Please select at least one subject to continue.")
     st.stop()
 
-# Flatten all chapters into a single list
-def extract_all_chapters(subject_dict):
-    all_chapters = []
-    for subject, content in subject_dict.items():
-        if isinstance(content, dict):
-            for sub, chapters in content.items():
-                all_chapters.extend([f"{subject} - {sub}: {ch}" for ch in chapters])
-        else:
-            all_chapters.extend([f"{subject}: {ch}" for ch in content])
-    return all_chapters
+# -------- Chapter Selection Under Each Subject --------
+st.subheader("📌 Select Chapters under Each Subject")
+final_selected_chapters = []
 
-all_chapters = extract_all_chapters(selected_subjects)
-total_chapters = len(all_chapters)
+for subject in chosen_subjects:
+    content = selected_subjects_data[subject]
+    if isinstance(content, dict):
+        for sub_part, chapters in content.items():
+            selected = st.multiselect(f"{subject} - {sub_part}", chapters, key=f"{subject}_{sub_part}")
+            final_selected_chapters.extend([f"{subject} - {sub_part}: {ch}" for ch in selected])
+    else:
+        selected = st.multiselect(subject, content, key=subject)
+        final_selected_chapters.extend([f"{subject}: {ch}" for ch in selected])
 
-# ---------------- Study Plan Display ----------------
-chapters_per_day = math.ceil(total_chapters / remaining_days)
-st.subheader("📆 Your Study Plan:")
+# -------- Study Plan Generator --------
+if len(final_selected_chapters) == 0:
+    st.warning("Please select at least one chapter to generate plan.")
+    st.stop()
 
+chapters_per_day = math.ceil(len(final_selected_chapters) / remaining_days)
+st.success(f"📆 Study Plan Generated for {len(final_selected_chapters)} Chapters over {remaining_days} days!")
+
+st.subheader("🗓️ Daily Study Plan")
 chapter_index = 0
 for day in range(remaining_days):
-    st.markdown(f"### 🗓️ Day {day + 1} – {today + datetime.timedelta(days=day)}")
+    st.markdown(f"### Day {day + 1} – {today + datetime.timedelta(days=day)}")
     for _ in range(chapters_per_day):
-        if chapter_index < total_chapters:
-            st.markdown(f"✅ {all_chapters[chapter_index]}")
+        if chapter_index < len(final_selected_chapters):
+            st.markdown(f"✅ {final_selected_chapters[chapter_index]}")
             chapter_index += 1
