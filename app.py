@@ -128,7 +128,6 @@ if st.button("✅ Generate Study Plan"):
         st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
 
         # ---------------------------- Export to PDF ----------------------------
-        
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Helvetica", size=12)
@@ -139,22 +138,22 @@ pdf.cell(0, 10, "Study Plan", ln=True, align='C')
 pdf.ln(5)
 pdf.set_font("Helvetica", size=12)
 
-# Add actual study plan
-for date, chapters in study_plan.items():
+# Add actual study plan from `plan`
+for date, chapters in plan:
     pdf.set_font("Helvetica", 'B', 12)
     pdf.cell(0, 10, f"📅 {date}", ln=True)
     pdf.set_font("Helvetica", size=12)
-    for ch in chapters:
-        pdf.multi_cell(0, 8, f"• {ch}")
+    for topic, hrs in chapters:
+        pdf.multi_cell(0, 8, f"• {topic} ({hrs} hrs)")
     pdf.ln(2)
 
 # Export as bytes for download
-pdf_output = pdf.output(dest='S').encode('latin1')  # encode if you're using fpdf (not fpdf2)
-
+pdf_output = pdf.output(dest='S').encode('latin1')
 
 st.download_button(
-    label="Download Study Plan as PDF",
+    label="📄 Download Study Plan as PDF",
     data=pdf_output,
     file_name="study_plan.pdf",
     mime='application/pdf'
 )
+
