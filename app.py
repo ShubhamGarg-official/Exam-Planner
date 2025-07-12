@@ -163,11 +163,6 @@ st.set_page_config(page_title="CA Exam Planner", layout="wide")
 st.title("📘 CA Exam Planner")
 st.markdown("Plan your CA exam revisions based on time and topic.")
 
-# ------------------ UI Setup ------------------
-st.set_page_config(page_title="CA Exam Planner", layout="wide")
-st.title("📘 CA Exam Planner")
-st.markdown("Plan your CA exam revisions based on time and topic.")
-
 # ------------------ Inputs ------------------
 study_hours = st.number_input("🕒 How many hours can you study per day?", min_value=1, max_value=16, value=6)
 group_choice = st.radio("🧠 Which Group are you preparing for?", ["Group I", "Group II", "Both Groups"])
@@ -194,22 +189,23 @@ selected_subjects = st.multiselect("📚 Choose Subjects", subject_list, default
 final_chapters = {}
 for subj in selected_subjects:
     chapters = group_data[subj]
-    if any(isinstance(v, dict) for v in chapters.values()):  # nested (IT, FMSM)
+    if any(isinstance(v, dict) for v in chapters.values()):
         flat = {}
         for subpart, subchap in chapters.items():
             for ch, hrs in subchap.items():
-                key = f"{subpart} - {ch} ({hrs} hrs)"
+                key = f"{subpart} - {ch}"
                 flat[key] = hrs
         chapters = flat
     else:
-        chapters = {f"{ch} ({hrs} hrs)": hrs for ch, hrs in chapters.items()}
+        chapters = chapters
 
-    ch_list = list(chapters.keys())
     select_all_ch = st.checkbox(f"Select all for {subj}")
-    selected_chapters = st.multiselect(f"📄 {subj} Chapters", ch_list, default=ch_list if select_all_ch else [])
+    chapter_names = list(chapters.keys())
+    default_chs = chapter_names if select_all_ch else []
+    selected_chs = st.multiselect(f"📄 Chapters from {subj}", chapter_names, default=default_chs)
 
-    for ch in selected_chapters:
-        final_chapters[ch] = chapters[ch]
+    for ch in selected_chs:
+        final_chapters[f"{ch} ({chapters[ch]} hrs)"] = chapters[ch]
 
 # ------------------ Planner Generator ------------------
 def generate_plan(chapters, hours_per_day, start, end):
@@ -239,6 +235,11 @@ if st.button("📅 Generate Planner"):
     elif start_date >= end_date:
         st.error("End date must be after start date.")
     else:
+        total_selected_hours = sum(final_chapters.values())
+        total_available_hours = (end_date - start_date).days * study_hours
+
+        st.info(f"🧮 Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}")
+
         plan = generate_plan(final_chapters, study_hours, start_date, end_date)
 
         st.success("✅ Planner Ready!")
@@ -274,4 +275,3 @@ if st.button("📅 Generate Planner"):
 # ------------------ Footer ------------------
 st.markdown("---")
 st.caption("Designed for CA students to revise smart and stress-free 🚀")
-
