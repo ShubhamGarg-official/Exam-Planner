@@ -128,23 +128,22 @@ if st.button("✅ Generate Study Plan"):
         st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
 
         # ---------------------------- Export to PDF ----------------------------
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="CA Exam Planner", ln=True, align="C")
-        pdf.ln(5)
-        pdf.cell(200, 8, txt=f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}", ln=True)
-        pdf.ln(5)
+        
+pdf = FPDF()
+pdf.add_page()
+pdf.set_font("Helvetica", size=12)
 
-        current_date = ""
-        for _, row in df_export.iterrows():
-            if row['Date'] != current_date:
-                current_date = row['Date']
-                pdf.ln(4)
-                pdf.set_font("Arial", style='B', size=11)
-                pdf.cell(200, 8, txt=f"📆 {current_date}", ln=True)
-                pdf.set_font("Arial", size=10)
-            pdf.cell(200, 6, txt=f"- {row['Plan']}", ln=True)
+content = "Your study plan here – Chapter 1, Chapter 2"
+content = content.encode('latin1', 'ignore').decode('latin1')  # clean text
 
-        pdf_output = pdf.output(dest='S').encode('latin1')
-        st.download_button("📄 Download as PDF", data=pdf_output, file_name="study_plan.pdf")
+pdf.multi_cell(0, 10, content)
+
+# Save PDF as bytes and download
+pdf_output = pdf.output(dest='S').encode('latin1')
+
+st.download_button(
+    label="Download Study Plan",
+    data=pdf_output,
+    file_name="study_plan.pdf",
+    mime='application/pdf'
+)
