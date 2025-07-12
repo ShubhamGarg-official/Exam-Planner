@@ -126,42 +126,52 @@ if st.button("✅ Generate Study Plan"):
             df_export.to_excel(writer, index=False, sheet_name='Planner')
             writer.close()
         st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
-                # ---------------------------- Export to PDF ----------------------------
-        
+        # ---------------------------- Export to PDF ----------------------------
+
         class PDF(FPDF):
             def header(self):
+                self.set_font("Arial", "B", 14)
+                self.cell(0, 10, "CA Exam Planner", 0, 1, "C")
+                self.ln(5)
+
+            def chapter_title(self, title):
                 self.set_font("Arial", "B", 12)
-                self.cell(0, 10, "CA Exam Study Planner", 0, 1, "C")
+                self.cell(0, 10, title, ln=True)
 
-            def chapter_title(self, day):
-                self.set_font("Arial", "B", 11)
-                self.cell(0, 10, f"{day}", ln=True)
-
-            def chapter_body(self, topics):
-                self.set_font("Arial", "", 10)
-                if topics:
-                    for topic, hr in topics:
-                        self.multi_cell(0, 8, f"- {topic} ({hr} hrs)")
-                else:
-                    self.multi_cell(0, 8, "🔸 Free / Buffer Day")
-                self.ln()
+            def chapter_body(self, lines):
+                self.set_font("Arial", "", 11)
+                for line in lines:
+                    self.multi_cell(0, 8, f"- {line}")
+                self.ln(3)
 
         pdf = PDF()
-        pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
 
+        # Header info
+        pdf.set_font("Arial", "", 11)
+        pdf.multi_cell(0, 8, f"Study Hours per Day: {study_hours}")
+        pdf.multi_cell(0, 8, f"Revision Period: {start_date.strftime('%d-%b-%Y')} to {end_date.strftime('%d-%b-%Y')}")
+        pdf.multi_cell(0, 8, f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}")
+        pdf.ln(5)
+
+        # Daily Plan
         for day, topics in plan:
             pdf.chapter_title(day)
-            pdf.chapter_body(topics)
+            if topics:
+                lines = [f"{topic} ({hr} hrs)" for topic, hr in topics]
+            else:
+                lines = ["Free / Buffer Day"]
+            pdf.chapter_body(lines)
 
-        pdf_output = pdf.output(dest='S').encode('latin1')  # Encode for binary download
-        b64_pdf = base64.b64encode(pdf_output).decode()
+        pdf_output = pdf.output(dest='S').encode('latin1')
         st.download_button(
             label="📄 Download as PDF",
             data=pdf_output,
             file_name="study_plan.pdf",
             mime="application/pdf"
         )
+
 
 
   
