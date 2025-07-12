@@ -113,7 +113,8 @@ if st.button("✅ Generate Study Plan"):
                 export_data.append({"Date": day, "Plan": "Free / Buffer Day"})
 
         df_export = pd.DataFrame(export_data)
-        df_export[["Topic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(\.\d+)?) hrs\)')
+        df_export[["Topic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+
 
         # ---------------------------- Export to Excel ----------------------------
         buffer = io.BytesIO()
