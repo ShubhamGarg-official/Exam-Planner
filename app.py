@@ -200,8 +200,11 @@ selected_subjects = st.multiselect("Choose Subjects", all_subjects, default=all_
 
 # Chapter Selection
 final_chapter_dict = {}
+
 for subject in selected_subjects:
     chapters = selected_data[subject]
+
+    # Handle sub-categorized subjects like Income Tax or FMSM
     if any(isinstance(v, dict) for v in chapters.values()):
         combined = {}
         for k, v in chapters.items():
@@ -212,10 +215,21 @@ for subject in selected_subjects:
         chapters = {f"{k} ({v} hrs)": v for k, v in chapters.items()}
 
     st.markdown(f"**{subject}**")
-    select_all = st.checkbox(f"Select All Chapters for {subject}", key=subject)
-    selected_chapters = st.multiselect(f"Select Chapters for {subject}", list(chapters.keys()), default=list(chapters.keys()) if select_all else [], key=f"ch_{subject}")
+    select_all = st.checkbox(f"Select All Chapters for {subject}", key=f"chk_{subject}")
+    
+    # ✅ Default all chapters if 'Select All' or if user hasn’t selected anything manually
+    default_chaps = list(chapters.keys()) if select_all else []
+    selected_chapters = st.multiselect(
+        f"Select Chapters for {subject}",
+        list(chapters.keys()),
+        default=default_chaps,
+        key=f"ch_{subject}"
+    )
+
+    # ✅ Add selected chapters to final dict
     for ch in selected_chapters:
         final_chapter_dict[ch] = chapters[ch]
+
 
 # Total Study Hour Summary
 if final_chapter_dict:
