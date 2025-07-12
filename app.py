@@ -1,152 +1,212 @@
 import streamlit as st
-import datetime
+from datetime import datetime, timedelta
 import math
 
-st.set_page_config(page_title="📘 CA Exam Planner", layout="centered")
+st.set_page_config(page_title="CA Exam Planner", layout="wide")
 
-st.title("📚 CA Exam Planner")
-group = st.radio("Select the group you are preparing for:", ["Group I", "Group II", "Both Groups"])
+# ------------------------------ Data ------------------------------
 
-# ---- Step 1: Date Inputs ----
-st.subheader("📅 Revision Planner Timeline")
-
-revision_start = st.date_input("Select Revision Start Date", min_value=datetime.date.today())
-revision_end = st.date_input("Select Revision End Date", min_value=revision_start)
-exam_start = st.date_input("Select Exam Start Date", min_value=revision_end)
-
-# Validation check
-if revision_end > exam_start - datetime.timedelta(days=2):
-    st.error("⚠️ Revision must end at least 2 days before Exam Start Date.")
-    st.stop()
-
-# Calculate available days
-available_days = (revision_end - revision_start).days + 1
-
-# ---- Step 2: Subject & Chapter Data ----
-subjects_data = {
+data = {
     "Group I": {
-        "Advance Accounting": [
-            "Accounting Policies (AS-1)", "Valuation of Inventories (AS-2)", "Cash Flow Statements (AS-3)",
-            "Contingencies & Events after BS date (AS-4)", "Net Profits (AS-5)", "Construction Contracts (AS-7)",
-            "Revenue Recognition (AS-9)", "PPE (AS-10)", "Foreign Exchange (AS-11)", "Government Grants (AS-12)",
-            "Investment Accounts (AS-13)", "Amalgamation of Companies (AS-14)", "Retirement Benefits (AS-15)",
-            "Borrowing Cost (AS-16)", "Segment Reporting (AS-17)", "Related Party Disclosures (AS-18)",
-            "Lease Accounting (AS-19)", "Earning Per Share (AS-20)", "Consolidation of Accounts (AS-21)",
-            "Accounting for Taxes on Income (AS-22)", "Associates (AS-23)", "Discontinuing Operation (AS-24)",
-            "Interim Financial Reporting (AS-25)", "Intangible Assets (AS-26)", "Joint Ventures (AS-27)",
-            "Impairment of Assets (AS-28)", "Provisions & Contingent Liability (AS-29)",
-            "Branch Accounting", "Buy Back of Shares", "Company Final Accounts", "Internal Reconstruction", "Schedule III"
-        ],
-        "Corporate and Other Laws": [
-            "Preliminary", "Incorporation of Company & Matters Incidental Thereto",
-            "Prospectus and Allotment of Securities", "Share Capital & Debentures",
-            "Acceptance of Deposits by Companies", "Registration of Charges",
-            "Management & Administration", "Declaration and Payment of Dividend",
-            "Accounts of Companies", "Audit & Auditors", "Companies Incorporated Outside India",
-            "The LLP Act, 2008", "The FEMA, 1999", "The GCA, 1897", "Interpretation of Statutes"
-        ],
+        "Advance Accounting": {
+            "AS-1: Accounting Policies": 1,
+            "AS-2: Valuation of Inventories": 4,
+            "AS-3: Cash Flow Statements": 8,
+            "AS-4: Contingencies & Events after Balance Sheet Date": 2,
+            "AS-5: Net Profits": 2,
+            "AS-7: Construction Contracts": 4,
+            "AS-9: Revenue Recognition": 1,
+            "AS-10: Property, Plant and Equipment": 3,
+            "AS-11: Effects of Changes in Foreign Exchange Rates": 4,
+            "AS-12: Government Grants": 3,
+            "AS-13: Investments": 6,
+            "AS-14: Amalgamation of Companies": 14,
+            "AS-15: Retirement Benefits": 2,
+            "AS-16: Borrowing Costs": 6,
+            "AS-17: Segment Reporting": 2,
+            "AS-18: Related Party Disclosures": 2,
+            "AS-19: Leases": 6,
+            "AS-20: Earnings Per Share": 4,
+            "AS-21: Consolidated Financial Statements": 12,
+            "AS-22: Accounting for Taxes on Income": 3,
+            "AS-23: Accounting for Investments in Associates": 2,
+            "AS-24: Discontinuing Operations": 2,
+            "AS-25: Interim Financial Reporting": 2,
+            "AS-26: Intangible Assets": 3,
+            "AS-27: Joint Ventures": 2,
+            "AS-28: Impairment of Assets": 2,
+            "AS-29: Provisions, Contingent Liabilities & Contingent Assets": 2,
+            "Schedule III": 2,
+            "Company Final Accounts": 12,
+            "Buy Back of Shares": 4,
+            "Internal Reconstruction": 8,
+            "Branch Accounting": 16,
+        },
+        "Corporate and Other Laws": {
+            # Companies Act
+            "Preliminary": 2.5,
+            "Incorporation of Company & Matters Incidental thereto": 5,
+            "Prospectus and Allotment of Securities": 4,
+            "Share Capital & Debentures": 5,
+            "Acceptance of Deposits by Companies": 3,
+            "Registration of Charges": 2.5,
+            "Management & Administration": 7,
+            "Declaration and Payment of Dividend": 3,
+            "Accounts of Companies": 6,
+            "Audit & Auditors": 5,
+            "Companies Incorporated Outside India": 2,
+            # Other Laws
+            "The LLP Act, 2008": 4,
+            "The FEMA, 1999": 3.5,
+            "The General Clauses Act, 1897": 3.5,
+            "Interpretation of Statutes": 3.5,
+        },
         "Taxation": {
-            "Income Tax": [
-                "Basic Concepts", "Residence & Scope of Total Income", "Income from Salary",
-                "Income from House Property", "PGBP", "Capital Gain", "IFOS",
-                "Income of Other Persons Included in Assessee's Total Income",
-                "Set off and Carry Forward of Losses", "Deductions from GTI",
-                "Advance Tax, TDS and TCS", "Provisions for Filing Return of Income and Self Assessment",
-                "Income Tax Liability Computation and Optimisation"
-            ],
-            "GST": [
-                "Introduction and Constitution", "Definitions", "Chargeability and Goods & Services",
-                "Supply", "Place of Supply", "Taxable Person", "Exemption", "Valuation",
-                "Reverse Charge Mechanism", "Invoice", "Time of Supply", "Registration",
-                "Input Tax Credit", "Manner of Payment", "TDS, TCS", "Filing of Return",
-                "Accounts and Records", "E-Way Bill"
-            ]
+            "Income Tax": {
+                "Basic Concepts": 2,
+                "Residence & Scope of Total Income": 2,
+                "Income from Salary": 4,
+                "Income from House Property": 2,
+                "Profits and Gains of Business or Profession (PGBP)": 8,
+                "Capital Gain": 8,
+                "Income from Other Sources (IFOS)": 4,
+                "Income of other persons included in Assessee's Total Income": 2,
+                "Set-off and Carry Forward of Losses": 2,
+                "Deductions from Gross Total Income": 6,
+                "Advance Tax, TDS and TCS": 5,
+                "Provisions for Filing Return of Income and Self-Assessment": 2,
+                "Income Tax Liability Computation and Optimisation": 10,
+            },
+            "GST": {
+                "Introduction and Constitution": 1,
+                "Definitions": 1,
+                "Chargeability and Goods & Services": 1,
+                "Supply": 1,
+                "Place of Supply": 1,
+                "Taxable Person": 1,
+                "Exemption": 3,
+                "Valuation": 1,
+                "Reverse Charge Mechanism": 2,
+                "Invoice": 1,
+                "Time of Supply": 1,
+                "Registration": 1,
+                "Input Tax Credit": 2,
+                "Manner of Payment": 1,
+                "TDS, TCS": 1,
+                "Filing of Return": 1,
+                "Accounts and Records": 1,
+                "E-Way Bill": 1,
+            }
         }
     },
     "Group II": {
-        "Cost and Management Accounting": [
-            "Introduction to CMA", "Material Cost", "Employee Cost", "Overheads – Absorption Costing Method",
-            "Activity Based Costing", "Cost Sheet", "Cost Accounting System", "Unit and Batch Costing",
-            "Job Costing", "Process and Operation Costing", "Joint & By-products", "Service Costing",
-            "Standard Costing", "Marginal Costing", "Budget and Budgetary Controls"
-        ],
-        "Auditing & Ethics": [
-            "Nature, Objectives & Scope of Audit", "Introduction", "SA 210", "SQC-1/SA 220 + Ethics",
-            "Audit Strategy, Planning & Programme", "Audit Documentation", "Risk Assessment & Internal Control",
-            "Audit Procedures", "Materiality", "Materiality SA 320", "Sampling SA 530",
-            "Evaluation of Misstatements(SA 450)", "Automated Environment", "SA 500/501/505/510",
-            "SA 500", "SA 501", "SA 505", "SA 510", "SA 550/560/570/580", "SA 550", "SA 560", "SA 570",
-            "SA 580", "Communication with Mgmt & TCWG(SA 260/265)", "Analytical Procedures",
-            "Audit Report", "SA 700", "SA 701", "SA 705", "SA 706", "SA 710", "Branch Audit & SA 600",
-            "SA 299", "CARO & Company Audit", "CARO 2020", "Company Audit", "Bank Audit",
-            "Government Audit", "Cooperative Society Audit", "Other Audit", "Local Bodies", "NGOs",
-            "Sole trader & Firm", "LLP", "Charitable Institution", "Educational Institutions",
-            "Hospitals", "Club", "Cinema", "Hire Purchase & Leases", "Hotels", "Trusts & Societies",
-            "Audit of Items of FS", "Internal Audit & SA 610"
-        ],
+        "Cost and Management Accounting": {
+            "Introduction to CMA": 3,
+            "Material Cost": 7,
+            "Employee Cost": 6,
+            "Overheads – Absorption Costing Method": 7.5,
+            "Activity-Based Costing": 6,
+            "Cost Sheet": 5,
+            "Cost Accounting System": 6,
+            "Unit and Batch Costing": 3.5,
+            "Job Costing": 2.5,
+            "Process and Operation Costing": 6.5,
+            "Joint & By-Products": 5,
+            "Service Costing": 7.5,
+            "Standard Costing": 8.5,
+            "Marginal Costing": 9,
+            "Budget and Budgetary Controls": 8,
+        },
         "FMSM": {
-            "Financial Management": [
-                "Scope and Objectives of FM", "Types of Financing", "Ratio Analysis",
-                "Cost of Capital", "Capital Structure", "Leverage",
-                "Investment Decisions – Capital Budgeting", "Dividend Decisions",
-                "Management of Working Capital"
-            ],
-            "Strategic Management": [
-                "Introduction to Strategic Management", "Strategic Analysis: External Environment",
-                "Strategic Analysis: Internal Environment", "Strategic Choices",
-                "Strategy Implementation & Evaluation"
-            ]
+            "FM": {
+                "Scope and Objectives of FM": 1.5,
+                "Types of Financing": 2,
+                "Ratio Analysis": 3.5,
+                "Cost of Capital": 4,
+                "Capital Structure": 4,
+                "Leverage": 4,
+                "Investment Decisions – Capital Budgeting": 4,
+                "Dividend Decisions": 4,
+                "Management of Working Capital": 4,
+            },
+            "SM": {
+                "Introduction to Strategic Management": 6,
+                "Strategic Analysis: External Environment": 6,
+                "Strategic Analysis: Internal Environment": 6,
+                "Strategic Choices": 7,
+                "Strategy Implementation & Evaluation": 10,
+            }
         }
     }
 }
 
-# -------- Group-wise Subject Load --------
-if group == "Group I":
-    selected_subjects_data = subjects_data["Group I"]
-elif group == "Group II":
-    selected_subjects_data = subjects_data["Group II"]
+# ------------------------------ UI ------------------------------
+
+st.title("📘 CA Exam Planner – Time-Based Study Schedule")
+
+group_choice = st.selectbox("Select Group:", ["Group I", "Group II", "Both Groups"])
+
+if group_choice == "Both Groups":
+    selected_data = {**data["Group I"], **data["Group II"]}
+elif group_choice == "Group I":
+    selected_data = data["Group I"]
 else:
-    selected_subjects_data = {**subjects_data["Group I"], **subjects_data["Group II"]}
+    selected_data = data["Group II"]
 
-# -------- Subject Selection (Max 6) --------
-st.subheader("✅ Select Subjects You Want to Study")
-subject_options = list(selected_subjects_data.keys())
-chosen_subjects = st.multiselect("Choose subjects:", subject_options)
+# Subject selection
+selected_subjects = st.multiselect("Select Subjects:", list(selected_data.keys()))
 
-if len(chosen_subjects) > 6:
-    st.error("You can select up to 6 subjects only.")
-    st.stop()
-elif len(chosen_subjects) == 0:
-    st.warning("Please select at least one subject to continue.")
-    st.stop()
-
-# -------- Chapter Selection Under Each Subject --------
-st.subheader("📌 Select Chapters under Each Subject")
-final_selected_chapters = []
-
-for subject in chosen_subjects:
-    content = selected_subjects_data[subject]
-    if isinstance(content, dict):
-        for sub_part, chapters in content.items():
-            selected = st.multiselect(f"{subject} - {sub_part}", chapters, key=f"{subject}_{sub_part}")
-            final_selected_chapters.extend([f"{subject} - {sub_part}: {ch}" for ch in selected])
+custom_chapters = {}
+for subject in selected_subjects:
+    sub_data = selected_data[subject]
+    if isinstance(sub_data, dict) and all(isinstance(v, dict) for v in sub_data.values()):
+        # Nested (e.g., Taxation)
+        st.subheader(subject)
+        for subpart, chapters in sub_data.items():
+            selected = st.multiselect(f"Select chapters from {subpart}:", list(chapters.keys()))
+            for ch in selected:
+                custom_chapters[f"{ch} ({subpart})"] = chapters[ch]
     else:
-        selected = st.multiselect(subject, content, key=subject)
-        final_selected_chapters.extend([f"{subject}: {ch}" for ch in selected])
+        selected = st.multiselect(f"Select chapters from {subject}:", list(sub_data.keys()))
+        for ch in selected:
+            custom_chapters[ch] = sub_data[ch]
 
-# -------- Study Plan Generator --------
-if len(final_selected_chapters) == 0:
-    st.warning("Please select at least one chapter to generate plan.")
-    st.stop()
+study_hours_per_day = st.slider("How many hours can you study per day?", 1, 16, 6)
 
-chapters_per_day = math.ceil(len(final_selected_chapters) / available_days)
-st.success(f"📆 Study Plan Generated for {len(final_selected_chapters)} Chapters over {available_days} days!")
+rev_start = st.date_input("Revision Start Date")
+rev_end = st.date_input("Revision End Date")
+exam_start = st.date_input("Exam Start Date")
 
-st.subheader("🗓️ Daily Study Plan")
-chapter_index = 0
-for day in range(available_days):
-    st.markdown(f"### Day {day + 1} – {revision_start + datetime.timedelta(days=day)}")
-    for _ in range(chapters_per_day):
-        if chapter_index < len(final_selected_chapters):
-            st.markdown(f"✅ {final_selected_chapters[chapter_index]}")
-            chapter_index += 1
+if st.button("Generate Study Plan"):
+    if rev_end >= exam_start:
+        st.error("⚠️ Revision End Date must be before Exam Start Date.")
+    elif rev_start >= rev_end:
+        st.error("⚠️ Revision Start Date must be before Revision End Date.")
+    else:
+        available_days = (rev_end - rev_start).days + 1
+        total_hours = sum(custom_chapters.values())
+        daily_plan = {}
+        current_day = rev_start
+        chapter_list = list(custom_chapters.items())
+
+        idx = 0
+        while current_day <= rev_end and idx < len(chapter_list):
+            hours_left = study_hours_per_day
+            daily_plan[current_day.strftime("%d-%b")] = []
+            while hours_left > 0 and idx < len(chapter_list):
+                chapter, time = chapter_list[idx]
+                if time <= hours_left:
+                    daily_plan[current_day.strftime("%d-%b")].append(f"{chapter} ({time} hrs)")
+                    hours_left -= time
+                    idx += 1
+                else:
+                    break
+            current_day += timedelta(days=1)
+
+        st.success("📅 Study Plan Generated:")
+        for day, tasks in daily_plan.items():
+            st.write(f"**{day}:**")
+            for task in tasks:
+                st.markdown(f"- {task}")
+            st.markdown("---")
+
