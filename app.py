@@ -113,15 +113,35 @@ if st.button("📅 Generate Study Planner"):
 
         # PDF Export
         pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="CA Study Plan", ln=True, align='C')
-        pdf.ln(10)
-        for _, row in df_export.iterrows():
-            pdf.multi_cell(0, 10, f"{row['Date']}: {row['Plan']}")
-        pdf_buffer = BytesIO()
-        pdf.output(pdf_buffer)
-        st.download_button("⬇️ Download PDF", data=pdf_buffer.getvalue(), file_name="CA_Study_Plan.pdf")
+pdf.add_page()
+pdf.set_font("Arial", size=12)
+
+pdf.cell(200, 10, txt="📘 CA Exam Planner", ln=True, align='C')
+pdf.ln(10)
+
+for day, topics in plan:
+    pdf.set_font("Arial", style='B', size=12)
+    pdf.cell(200, 10, txt=f"{day}", ln=True)
+    pdf.set_font("Arial", size=12)
+    if topics:
+        for topic in topics:
+            pdf.multi_cell(200, 8, txt=f"- {topic}")
+    else:
+        pdf.cell(200, 8, txt="🔸 Free / Buffer Day", ln=True)
+    pdf.ln(5)
+
+# 👇 Fix is here
+pdf_buffer = BytesIO()
+pdf_output = pdf.output(dest='S').encode('latin1')  # Get content as bytes
+pdf_buffer.write(pdf_output)
+pdf_buffer.seek(0)
+
+st.download_button(
+    label="📄 Export as PDF",
+    data=pdf_buffer,
+    file_name="CA_Exam_Planner.pdf",
+    mime='application/pdf'
+)
 
 st.markdown("---")
 st.caption("Built with ❤️ for CA students by a CA Student")
