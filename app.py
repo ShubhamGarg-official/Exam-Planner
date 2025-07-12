@@ -84,10 +84,14 @@ def generate_plan(chapters, hours_per_day, start_date, end_date):
                 available_time -= ch_time
                 idx += 1
             else:
-                break
+                # Split the chapter across multiple days
+                today.append((f"{chapter} (Part)", available_time))
+                chapters[idx] = (chapter, ch_time - available_time)
+                available_time = 0
         plan.append((current_day.strftime("%d-%b-%Y"), today))
         current_day += timedelta(days=1)
     return plan
+
 
 # ---------------------------- Planner Display ----------------------------
 if st.button("✅ Generate Study Plan"):
