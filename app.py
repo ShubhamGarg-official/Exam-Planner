@@ -4,7 +4,7 @@ import pandas as pd
 import io
 from fpdf import FPDF
 import base64
-from ca_exam_data import data  # This should contain the complete subject-chapter dictionary with hours
+from ca_exam_data import data  # Your data source file
 
 # ---------------------------- Streamlit Page Setup ----------------------------
 st.set_page_config(page_title="CA Exam Planner", layout="wide")
@@ -42,7 +42,6 @@ for subject in selected_subjects:
     chapters = selected_data[subject]
     flat_chapters = {}
 
-    # Handle nested subjects
     if any(isinstance(val, dict) for val in chapters.values()):
         for subtopic, subchaps in chapters.items():
             for ch, hr in subchaps.items():
@@ -84,14 +83,12 @@ def generate_plan(chapters, hours_per_day, start_date, end_date):
                 available_time -= ch_time
                 idx += 1
             else:
-                # Split the chapter across multiple days
                 today.append((f"{chapter} (Part)", available_time))
                 chapters[idx] = (chapter, ch_time - available_time)
                 available_time = 0
         plan.append((current_day.strftime("%d-%b-%Y"), today))
         current_day += timedelta(days=1)
     return plan
-
 
 # ---------------------------- Planner Display ----------------------------
 if st.button("✅ Generate Study Plan"):
@@ -117,25 +114,19 @@ if st.button("✅ Generate Study Plan"):
                 export_data.append({"Date": day, "Plan": "Free / Buffer Day"})
 
         df_export = pd.DataFrame(export_data)
-        # Extract full topic and hours
-df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
 
-# Clean the topic name to remove "Advance Accounting - " or similar prefixes
-df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
-
-# Drop the extra column
-df_export.drop(columns=["FullTopic"], inplace=True)
-
-
+        # ---------------------------- Clean Topic and Extract Hours ----------------------------
+        df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+        df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
+        df_export.drop(columns=["FullTopic"], inplace=True)
 
         # ---------------------------- Export to Excel ----------------------------
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
             df_export.to_excel(writer, index=False, sheet_name='Planner')
-            writer.close()
         st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
-        # ---------------------------- Export to PDF ----------------------------
 
+        # ---------------------------- Export to PDF ----------------------------
         class PDF(FPDF):
             def header(self):
                 self.set_font("Arial", "B", 14)
@@ -156,14 +147,12 @@ df_export.drop(columns=["FullTopic"], inplace=True)
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
 
-        # Header info
         pdf.set_font("Arial", "", 11)
         pdf.multi_cell(0, 8, f"Study Hours per Day: {study_hours}")
         pdf.multi_cell(0, 8, f"Revision Period: {start_date.strftime('%d-%b-%Y')} to {end_date.strftime('%d-%b-%Y')}")
         pdf.multi_cell(0, 8, f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}")
         pdf.ln(5)
 
-        # Daily Plan
         for day, topics in plan:
             pdf.chapter_title(day)
             if topics:
@@ -179,9 +168,3 @@ df_export.drop(columns=["FullTopic"], inplace=True)
             file_name="study_plan.pdf",
             mime="application/pdf"
         )
-
-
-
-  
-
-
