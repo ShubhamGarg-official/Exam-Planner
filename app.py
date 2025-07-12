@@ -1,10 +1,23 @@
+# ✅ Final CA Exam Planner App – All-In-One Version
+# Features:
+# - Study Hours input
+# - Group selection (Group I / II / Both)
+# - Start & End Dates
+# - Subject & Chapter selection (with Select All)
+# - Auto time-based chapter allocation
+# - Excel export
+# - Reset button
+
 import streamlit as st
+import pandas as pd
 from datetime import datetime, timedelta
-import math
+import io
 
 st.set_page_config(page_title="CA Exam Planner", layout="wide")
+st.title("📘 CA Exam Planner")
+st.markdown("Plan your revisions based on your available time, subjects, and goals.")
 
-# ------------------------------ Data ------------------------------
+# ------------------ Full Subject Data ------------------
 data = {
     "Group I": {
         "Advance Accounting": {
@@ -158,8 +171,111 @@ data = {
     }
 }
 
+# ------------------ UI + Planner Logic ------------------
 
-st.title("📘 CA Exam Planner – Time-Based Study Schedule")
-st.write("Plan your revisions based on available study hours and target dates.")
+st.subheader("🔢 Step 1: Study Hours")
+study_hours = st.number_input("How many hours can you study per day?", min_value=1, max_value=16, value=6)
 
-study_hours_per_day = st.number_input("📅 How many hours can you study per day? (Max 16)", min_value=1, max_value=16, value=6)
+st.subheader("🧠 Step 2: Select Group")
+group_choice = st.radio("Which Group are you preparing for?", ["Group I", "Group II", "Both Groups"])
+
+st.subheader("📆 Step 3: Select Revision Dates")
+col1, col2 = st.columns(2)
+with col1:
+    start_date = st.date_input("Revision Start Date", datetime.today())
+with col2:
+    end_date = st.date_input("Revision End Date", datetime.today() + timedelta(days=30))
+
+st.subheader("📚 Step 4: Select Subjects")
+if group_choice == "Group I":
+    selected_data = data["Group I"]
+elif group_choice == "Group II":
+    selected_data = data["Group II"]
+else:
+    selected_data = {**data["Group I"], **data["Group II"]}
+
+all_subjects = list(selected_data.keys())
+select_all_subjects = st.checkbox("Select All Subjects")
+selected_subjects = st.multiselect("Choose Subjects", all_subjects, default=all_subjects if select_all_subjects else [])
+
+# Chapter Selection
+final_chapter_dict = {}
+for subject in selected_subjects:
+    chapters = selected_data[subject]
+    if any(isinstance(v, dict) for v in chapters.values()):
+        combined = {}
+        for k, v in chapters.items():
+            if isinstance(v, dict):
+                combined.update({f"{k} - {sk} ({sv} hrs)": sv for sk, sv in v.items()})
+        chapters = combined
+    else:
+        chapters = {f"{k} ({v} hrs)": v for k, v in chapters.items()}
+
+    st.markdown(f"**{subject}**")
+    select_all = st.checkbox(f"Select All Chapters for {subject}", key=subject)
+    selected_chapters = st.multiselect(f"Select Chapters for {subject}", list(chapters.keys()), default=list(chapters.keys()) if select_all else [], key=f"ch_{subject}")
+    for ch in selected_chapters:
+        final_chapter_dict[ch] = chapters[ch]
+
+# Total Study Hour Summary
+if final_chapter_dict:
+    total_selected_hours = sum(final_chapter_dict.values())
+    available_hours = (end_date - start_date).days * study_hours
+    st.info(f"Total hours selected: **{total_selected_hours} hrs** | Total available: **{available_hours} hrs**")
+    if total_selected_hours > available_hours:
+        st.warning("⚠️ Selected chapters need more time than available in given date range.")
+
+# Generate Planner
+if st.button("📅 Generate Study Planner"):
+    if start_date >= end_date:
+        st.error("End date must be after start date.")
+    elif not final_chapter_dict:
+        st.warning("Please select at least one chapter.")
+    else:
+        sorted_chapters = list(final_chapter_dict.items())
+        plan = []
+        idx = 0
+        day = start_date
+        while day <= end_date and idx < len(sorted_chapters):
+            time_left = study_hours
+            today = []
+            while time_left > 0 and idx < len(sorted_chapters):
+                ch, hrs = sorted_chapters[idx]
+                if hrs <= time_left:
+                    today.append(f"{ch}")
+                    time_left -= hrs
+                    idx += 1
+                else:
+                    break
+            plan.append((day.strftime("%d-%b-%Y"), today))
+            day += timedelta(days=1)
+
+        # Display plan
+        st.success("✅ Plan Generated!")
+        for d, topics in plan:
+            st.subheader(f"📆 {d}")
+            if topics:
+                for t in topics:
+                    st.markdown(f"- {t}")
+            else:
+                st.write("🔸 Free Day")
+
+        # Export to Excel
+        df = pd.DataFrame([(d, t) for d, topics in plan for t in topics], columns=["Date", "Chapter"])
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name="Study Plan")
+            writer.save()
+        st.download_button(
+            label="📥 Download Plan as Excel",
+            data=buffer,
+            file_name="study_plan.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+# Reset Button
+if st.button("🔄 Reset Planner"):
+    st.experimental_rerun()
+
+st.markdown("---")
+st.caption("Made for CA warriors ⚔️ | Plan Smart. Study Sharp. ✨")
