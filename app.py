@@ -102,7 +102,7 @@ else:
     selected_subjects_data = {**subjects_data["Group I"], **subjects_data["Group II"]}
 
 # -------- Subject Selection (Max 6) --------
-st.subheader("✅ Select Subjects You Want to Study (Max 6)")
+st.subheader("✅ Select Subjects You Want to Study")
 subject_options = list(selected_subjects_data.keys())
 chosen_subjects = st.multiselect("Choose subjects:", subject_options)
 
