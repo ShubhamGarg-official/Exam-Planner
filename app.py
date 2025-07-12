@@ -133,16 +133,27 @@ pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Helvetica", size=12)
 
-content = "Your study plan here – Chapter 1, Chapter 2"
-content = content.encode('latin1', 'ignore').decode('latin1')  # clean text
+# Header
+pdf.set_font("Helvetica", 'B', 14)
+pdf.cell(0, 10, "Study Plan", ln=True, align='C')
+pdf.ln(5)
+pdf.set_font("Helvetica", size=12)
 
-pdf.multi_cell(0, 10, content)
+# Add actual study plan
+for date, chapters in study_plan.items():
+    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(0, 10, f"📅 {date}", ln=True)
+    pdf.set_font("Helvetica", size=12)
+    for ch in chapters:
+        pdf.multi_cell(0, 8, f"• {ch}")
+    pdf.ln(2)
 
-# Save PDF as bytes and download
-pdf_output = pdf.output(dest='S').encode('latin1')
+# Export as bytes for download
+pdf_output = pdf.output(dest='S').encode('latin1')  # encode if you're using fpdf (not fpdf2)
+
 
 st.download_button(
-    label="Download Study Plan",
+    label="Download Study Plan as PDF",
     data=pdf_output,
     file_name="study_plan.pdf",
     mime='application/pdf'
