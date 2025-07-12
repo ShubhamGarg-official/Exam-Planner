@@ -7,15 +7,22 @@ st.set_page_config(page_title="📘 CA Exam Planner", layout="centered")
 st.title("📚 CA Exam Planner")
 group = st.radio("Select the group you are preparing for:", ["Group I", "Group II", "Both Groups"])
 
-exam_date = st.date_input("📅 Select your CA Exam Date", min_value=datetime.date.today())
-today = datetime.date.today()
-remaining_days = (exam_date - today).days
+# ---- Step 1: Date Inputs ----
+st.subheader("📅 Revision Planner Timeline")
 
-if remaining_days <= 0:
-    st.warning("Please select a valid future date for the exam.")
+revision_start = st.date_input("Select Revision Start Date", min_value=datetime.date.today())
+revision_end = st.date_input("Select Revision End Date", min_value=revision_start)
+exam_start = st.date_input("Select Exam Start Date", min_value=revision_end)
+
+# Validation check
+if revision_end > exam_start - datetime.timedelta(days=2):
+    st.error("⚠️ Revision must end at least 2 days before Exam Start Date.")
     st.stop()
 
-# ---------- Subject and Chapter Data (Full Final Version) ----------
+# Calculate available days
+available_days = (revision_end - revision_start).days + 1
+
+# ---- Step 2: Subject & Chapter Data ----
 subjects_data = {
     "Group I": {
         "Advance Accounting": [
@@ -132,13 +139,13 @@ if len(final_selected_chapters) == 0:
     st.warning("Please select at least one chapter to generate plan.")
     st.stop()
 
-chapters_per_day = math.ceil(len(final_selected_chapters) / remaining_days)
-st.success(f"📆 Study Plan Generated for {len(final_selected_chapters)} Chapters over {remaining_days} days!")
+chapters_per_day = math.ceil(len(final_selected_chapters) / available_days)
+st.success(f"📆 Study Plan Generated for {len(final_selected_chapters)} Chapters over {available_days} days!")
 
 st.subheader("🗓️ Daily Study Plan")
 chapter_index = 0
-for day in range(remaining_days):
-    st.markdown(f"### Day {day + 1} – {today + datetime.timedelta(days=day)}")
+for day in range(available_days):
+    st.markdown(f"### Day {day + 1} – {revision_start + datetime.timedelta(days=day)}")
     for _ in range(chapters_per_day):
         if chapter_index < len(final_selected_chapters):
             st.markdown(f"✅ {final_selected_chapters[chapter_index]}")
