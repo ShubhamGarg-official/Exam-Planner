@@ -115,10 +115,18 @@ if st.button("✅ Generate Study Plan"):
 
         df_export = pd.DataFrame(export_data)
 
-        # ---------------------------- Clean Topic and Extract Hours ----------------------------
-        df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
-        df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
-        df_export.drop(columns=["FullTopic"], inplace=True)
+# Only keep rows that are not "Free / Buffer Day"
+df_export = df_export[df_export["Plan"] != "Free / Buffer Day"]
+
+# Extract topic and hours from Plan
+df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+
+# Extract only the topic text after the last " - "
+df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
+
+# Keep only required columns
+df_export = df_export[["Date", "Topic", "Estimated Hours"]]
+
 
         # ---------------------------- Export to Excel ----------------------------
         buffer = io.BytesIO()
