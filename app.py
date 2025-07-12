@@ -1,7 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
-from fpdf import FPDF
 import io
 import base64
 from ca_exam_data import data  # This should contain the complete subject-chapter dictionary with hours
@@ -127,34 +126,6 @@ if st.button("✅ Generate Study Plan"):
             writer.close()
         st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
 
-        # ---------------------------- Export to PDF ----------------------------
-pdf = FPDF()
-pdf.add_page()
-pdf.set_font("Helvetica", size=12)
-
-# Header
-pdf.set_font("Helvetica", 'B', 14)
-pdf.cell(0, 10, "Study Plan", ln=True, align='C')
-pdf.ln(5)
-pdf.set_font("Helvetica", size=12)
-
-# Add actual study plan
-for date, chapters in plan:
-    pdf.set_font("Helvetica", 'B', 12)
-    pdf.cell(0, 10, f"📅 {date}", ln=True)
-    pdf.set_font("Helvetica", size=12)
-    for ch, hr in chapters:
-        pdf.multi_cell(0, 8, f"• {ch} ({hr} hrs)")
-    pdf.ln(2)
-
-# Export as bytes for download
-pdf_output = pdf.output(dest='S').encode('latin1')
-
-st.download_button(
-    label="📄 Download Study Plan as PDF",
-    data=pdf_output,
-    file_name="study_plan.pdf",
-    mime='application/pdf'
-)
+  
 
 
