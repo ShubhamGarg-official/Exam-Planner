@@ -198,13 +198,14 @@ all_subjects = list(selected_data.keys())
 select_all_subjects = st.checkbox("Select All Subjects")
 selected_subjects = st.multiselect("Choose Subjects", all_subjects, default=all_subjects if select_all_subjects else [])
 
-# Chapter Selection
+# ------------------ Chapter Selection ------------------
+
 final_chapter_dict = {}
 
 for subject in selected_subjects:
     chapters = selected_data[subject]
 
-    # Handle sub-categorized subjects like Income Tax or FMSM
+    # Handle sub-categorized subjects (like Income Tax or FMSM)
     if any(isinstance(v, dict) for v in chapters.values()):
         combined = {}
         for k, v in chapters.items():
@@ -215,7 +216,14 @@ for subject in selected_subjects:
         chapters = {f"{k} ({v} hrs)": v for k, v in chapters.items()}
 
     st.markdown(f"**{subject}**")
-    select_all = st.checkbox(f"Select All Chapters for {subject}", key=f"chk_{subject}")
+    chapter_keys = list(chapters.keys())
+    select_all = st.checkbox(f"Select All Chapters for {subject}", value=True, key=f"chk_{subject}")
+    
+    selected_chapters = chapter_keys if select_all else st.multiselect(
+        f"Select Chapters for {subject}",
+        chapter_keys,
+        key=f"ch_{subject}"
+    )
     
     # ✅ Default all chapters if 'Select All' or if user hasn’t selected anything manually
     default_chaps = list(chapters.keys()) if select_all else []
