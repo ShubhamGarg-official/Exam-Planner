@@ -112,36 +112,43 @@ if st.button("📅 Generate Study Planner"):
         st.download_button("⬇️ Download Excel", data=buffer.getvalue(), file_name="CA_Study_Plan.xlsx")
 
         # PDF Export
-        pdf = FPDF()
+from fpdf import FPDF
+import io
+
+# Create the PDF
+pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Arial", size=12)
 
-pdf.cell(200, 10, txt="📘 CA Exam Planner", ln=True, align='C')
-pdf.ln(10)
+pdf.cell(200, 10, txt="CA Exam Planner", ln=True, align='C')
+pdf.ln(5)
+pdf.cell(200, 8, txt=f"Study Hours per Day: {study_hours}", ln=True)
+pdf.cell(200, 8, txt=f"Revision Period: {start_date.strftime('%d-%b-%Y')} to {end_date.strftime('%d-%b-%Y')}", ln=True)
+pdf.cell(200, 8, txt=f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}", ln=True)
+pdf.ln(5)
 
 for day, topics in plan:
-    pdf.set_font("Arial", style='B', size=12)
-    pdf.cell(200, 10, txt=f"{day}", ln=True)
-    pdf.set_font("Arial", size=12)
+    pdf.set_font("Arial", 'B', size=11)
+    pdf.cell(200, 8, txt=f"{day}", ln=True)
+    pdf.set_font("Arial", size=11)
     if topics:
         for topic in topics:
-            pdf.multi_cell(200, 8, txt=f"- {topic}")
+            pdf.cell(200, 8, txt=f"- {topic}", ln=True)
     else:
-        pdf.cell(200, 8, txt="🔸 Free / Buffer Day", ln=True)
-    pdf.ln(5)
+        pdf.cell(200, 8, txt="Free / Buffer Day", ln=True)
+    pdf.ln(2)
 
-# 👇 Fix is here
-pdf_buffer = BytesIO()
-pdf_output = pdf.output(dest='S').encode('latin1')  # Get content as bytes
-pdf_buffer.write(pdf_output)
-pdf_buffer.seek(0)
+# Convert to byte stream
+pdf_output = pdf.output(dest='S').encode('latin1')
+pdf_buffer = io.BytesIO(pdf_output)
 
 st.download_button(
-    label="📄 Export as PDF",
+    label="Download Planner as PDF",
     data=pdf_buffer,
     file_name="CA_Exam_Planner.pdf",
-    mime='application/pdf'
+    mime="application/pdf"
 )
+
 
 st.markdown("---")
 st.caption("Built with ❤️ for CA students by a CA Student")
