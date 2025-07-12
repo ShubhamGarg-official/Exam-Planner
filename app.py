@@ -260,18 +260,24 @@ if st.button("📅 Generate Study Planner"):
             else:
                 st.write("🔸 Free Day")
 
-        # Export to Excel
-        df = pd.DataFrame([(d, t.split(' (')[0], t.split(' (')[1].replace(' hrs)', '')) for d, topics in plan for t in topics], columns=["Date", "Chapter", "Estimated Hours"])
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name="Study Plan")
-            writer.save()
-        st.download_button(
-            label="📥 Download Plan as Excel",
-            data=buffer,
-            file_name="study_plan.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+       # Export to Excel
+df = pd.DataFrame([
+    (d, t.split(' (')[0], t.split(' (')[1].replace(' hrs)', ''))
+    for d, topics in plan for t in topics
+], columns=["Date", "Chapter", "Estimated Hours"])
+
+buffer = io.BytesIO()
+with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+    df.to_excel(writer, index=False, sheet_name="Study Plan")
+
+buffer.seek(0)
+st.download_button(
+    label="📥 Download Plan as Excel",
+    data=buffer,
+    file_name="study_plan.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
 
 # Reset Button
 if st.button("🔄 Reset Planner"):
