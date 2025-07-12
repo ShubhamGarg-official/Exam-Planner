@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
 import io
+from fpdf import FPDF
 import base64
 from ca_exam_data import data  # This should contain the complete subject-chapter dictionary with hours
 
@@ -125,6 +126,43 @@ if st.button("✅ Generate Study Plan"):
             df_export.to_excel(writer, index=False, sheet_name='Planner')
             writer.close()
         st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
+                # ---------------------------- Export to PDF ----------------------------
+        
+        class PDF(FPDF):
+            def header(self):
+                self.set_font("Arial", "B", 12)
+                self.cell(0, 10, "CA Exam Study Planner", 0, 1, "C")
+
+            def chapter_title(self, day):
+                self.set_font("Arial", "B", 11)
+                self.cell(0, 10, f"{day}", ln=True)
+
+            def chapter_body(self, topics):
+                self.set_font("Arial", "", 10)
+                if topics:
+                    for topic, hr in topics:
+                        self.multi_cell(0, 8, f"- {topic} ({hr} hrs)")
+                else:
+                    self.multi_cell(0, 8, "🔸 Free / Buffer Day")
+                self.ln()
+
+        pdf = PDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
+
+        for day, topics in plan:
+            pdf.chapter_title(day)
+            pdf.chapter_body(topics)
+
+        pdf_output = pdf.output(dest='S').encode('latin1')  # Encode for binary download
+        b64_pdf = base64.b64encode(pdf_output).decode()
+        st.download_button(
+            label="📄 Download as PDF",
+            data=pdf_output,
+            file_name="study_plan.pdf",
+            mime="application/pdf"
+        )
+
 
   
 
