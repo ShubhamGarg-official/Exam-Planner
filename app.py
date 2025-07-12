@@ -117,7 +117,15 @@ if st.button("✅ Generate Study Plan"):
                 export_data.append({"Date": day, "Plan": "Free / Buffer Day"})
 
         df_export = pd.DataFrame(export_data)
-        df_export[["Topic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+        # Extract full topic and hours
+df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+
+# Clean the topic name to remove "Advance Accounting - " or similar prefixes
+df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
+
+# Drop the extra column
+df_export.drop(columns=["FullTopic"], inplace=True)
+
 
 
         # ---------------------------- Export to Excel ----------------------------
