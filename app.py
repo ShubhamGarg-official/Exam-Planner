@@ -138,13 +138,13 @@ pdf.cell(0, 10, "Study Plan", ln=True, align='C')
 pdf.ln(5)
 pdf.set_font("Helvetica", size=12)
 
-# Add actual study plan from `plan`
+# Add actual study plan
 for date, chapters in plan:
     pdf.set_font("Helvetica", 'B', 12)
     pdf.cell(0, 10, f"📅 {date}", ln=True)
     pdf.set_font("Helvetica", size=12)
-    for topic, hrs in chapters:
-        pdf.multi_cell(0, 8, f"• {topic} ({hrs} hrs)")
+    for ch, hr in chapters:
+        pdf.multi_cell(0, 8, f"• {ch} ({hr} hrs)")
     pdf.ln(2)
 
 # Export as bytes for download
@@ -156,4 +156,5 @@ st.download_button(
     file_name="study_plan.pdf",
     mime='application/pdf'
 )
+
 
