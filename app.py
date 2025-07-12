@@ -205,25 +205,42 @@ final_chapter_dict = {}
 for subject in selected_subjects:
     chapters = selected_data[subject]
 
-    # Handle sub-categorized subjects (like Income Tax or FMSM)
+    # Flatten sub-subjects (like Taxation, FMSM)
     if any(isinstance(v, dict) for v in chapters.values()):
         combined = {}
         for k, v in chapters.items():
             if isinstance(v, dict):
-                combined.update({f"{k} - {sk} ({sv} hrs)": sv for sk, sv in v.items()})
+                for sub_ch, sub_hrs in v.items():
+                    label = f"{k} - {sub_ch}"
+                    combined[label] = sub_hrs
         chapters = combined
     else:
-        chapters = {f"{k} ({v} hrs)": v for k, v in chapters.items()}
+        cleaned_chapters = {}
+        for k, v in chapters.items():
+            if '(' in k and 'hr' in k:
+                label = k  # Don't add hours again
+            else:
+                label = f"{k}"
+            cleaned_chapters[label] = v
+        chapters = cleaned_chapters
 
-    st.markdown(f"**{subject}**")
-    chapter_keys = list(chapters.keys())
-    select_all = st.checkbox(f"Select All Chapters for {subject}", value=True, key=f"chk_{subject}")
-    
+    st.markdown(f"**📘 {subject}**")
+    chapter_keys = [f"{ch} ({hrs} hrs)" for ch, hrs in chapters.items()]
+    key_prefix = subject.replace(" ", "_")
+
+    select_all = st.checkbox(f"Select All Chapters for {subject}", value=True, key=f"{key_prefix}_select_all")
     selected_chapters = chapter_keys if select_all else st.multiselect(
         f"Select Chapters for {subject}",
         chapter_keys,
-        key=f"ch_{subject}"
+        key=f"{key_prefix}_chapter_select"
     )
+
+    # Add to final dict
+    for ch_label in selected_chapters:
+        name = ch_label.rsplit(" (", 1)[0]
+        hrs = float(ch_label.split("(")[-1].replace(" hrs)", ""))
+        final_chapter_dict[name] = hrs
+
     
     # ✅ Default all chapters if 'Select All' or if user hasn’t selected anything manually
     default_chaps = list(chapters.keys()) if select_all else []
