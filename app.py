@@ -116,6 +116,14 @@ from fpdf import FPDF
 import io
 
 # Create the PDF
+from fpdf import FPDF
+import io
+
+# Calculate totals
+total_selected_hours = sum(final_chapter_dict.values())
+total_available_hours = (end_date - start_date).days * study_hours
+
+# Create the PDF
 pdf = FPDF()
 pdf.add_page()
 pdf.set_font("Arial", size=12)
@@ -148,6 +156,7 @@ st.download_button(
     file_name="CA_Exam_Planner.pdf",
     mime="application/pdf"
 )
+
 
 
 st.markdown("---")
