@@ -3,8 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import io
 from fpdf import FPDF
-import base64
-from ca_exam_data import data  # Your data source file
+from ca_exam_data import data  # Your own module
 
 # ---------------------------- Streamlit Page Setup ----------------------------
 st.set_page_config(page_title="CA Exam Planner", layout="wide")
@@ -115,18 +114,13 @@ if st.button("✅ Generate Study Plan"):
 
         df_export = pd.DataFrame(export_data)
 
-# Only keep rows that are not "Free / Buffer Day"
-df_export = df_export[df_export["Plan"] != "Free / Buffer Day"]
+        # Remove "Free / Buffer Day" rows
+        df_export = df_export[df_export["Plan"] != "Free / Buffer Day"]
 
-# Extract topic and hours from Plan
-df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
-
-# Extract only the topic text after the last " - "
-df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
-
-# Keep only required columns
-df_export = df_export[["Date", "Topic", "Estimated Hours"]]
-
+        # Extract topic and hours
+        df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+        df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
+        df_export = df_export[["Date", "Topic", "Estimated Hours"]]
 
         # ---------------------------- Export to Excel ----------------------------
         buffer = io.BytesIO()
