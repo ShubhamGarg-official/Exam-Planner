@@ -34,6 +34,45 @@ data = {
             "Internal Reconstruction": 8,
             "Branch Accounting": 16
         },
+        # Priority lists for Advance Accounting based on image_cc95f9.png
+        "Advance Accounting_High_Importance": [
+            "Branch Accounting",
+            "Internal Reconstruction",
+            "AS-14: Amalgamation of Companies",
+            "AS-3: Cash Flow Statements",
+            "AS-13: Investments",
+            "Buy Back of Shares",
+            "Company Final Accounts",
+            "AS-4: Contingencies & Events after Balance Sheet Date", # Added from image
+            "AS-5: Net Profits", # Added from image
+            "AS-10: Property, Plant and Equipment", # Added from image
+            "AS-11: Effects of Changes in Foreign Exchange Rates", # Added from image
+            "AS-16: Borrowing Costs", # Added from image
+            "AS-18: Related Party Disclosures", # Added from image
+            "AS-25: Interim Financial Reporting" # Added from image
+        ],
+        "Advance Accounting_Medium_Importance": [
+            "AS-21: Consolidated Financial Statements",
+            "AS-22: Accounting for Taxes on Income",
+            "AS-15: Retirement Benefits",
+            "AS-19: Leases",
+            "AS-20: Earnings Per Share",
+            "AS-26: Intangible Assets",
+            "AS-28: Impairment of Assets",
+            "Schedule III"
+        ],
+        "Advance Accounting_Least_Importance": [
+            "AS-23: Accounting for Investments in Associates",
+            "AS-27: Joint Ventures",
+            "AS-1: Accounting Policies",
+            "AS-2: Valuation of Inventories",
+            "AS-7: Construction Contracts",
+            "AS-9: Revenue Recognition",
+            "AS-12: Government Grants",
+            "AS-17: Segment Reporting",
+            "AS-24: Discontinuing Operations",
+            "AS-29: Provisions, Contingent Liabilities & Contingent Assets"
+        ],
         "Corporate and Other Laws": {
             "Preliminary": 2.5,
             "Inc of Co. & Matters Incidental thereto": 5,
@@ -51,7 +90,16 @@ data = {
             "The GCA, 1897": 3.5,
             "Interpretation of Statutes": 3.5
         },
-        "Taxation": {
+        # Placeholder importance lists for Corporate and Other Laws
+        "Corporate and Other Laws_High_Importance": [
+            "Share Capital & Debentures",
+            "Mgmt & Adminstration",
+            "Accounts of Companies",
+            "Audit & Auditors"
+        ],
+        "Corporate and Other Laws_Medium_Importance": [],
+        "Corporate and Other Laws_Least_Importance": [],
+        "Taxation": { # This is a meta-subject containing sub-subjects
             "Income Tax": {
                 "Basic Concepts": 2,
                 "Residence & Scope of Total Income": 2,
@@ -67,6 +115,15 @@ data = {
                 "Prov for filing return of Income and Self Assessment": 2,
                 "Income Tax Liability Computation and Optimisation": 10
             },
+            # Placeholder importance lists for Income Tax
+            "Income Tax_High_Importance": [
+                "PGBP",
+                "Capital Gain",
+                "Deduction from GTI",
+                "Income Tax Liability Computation and Optimisation"
+            ],
+            "Income Tax_Medium_Importance": [],
+            "Income Tax_Least_Importance": [],
             "GST": {
                 "Introduction and Constitution": 0.5,
                 "Definitions": 0.5,
@@ -86,7 +143,32 @@ data = {
                 "Filing of Return": 0.5,
                 "Accounts and Records": 0.5,
                 "E-Way Bill": 0.5
-            }
+            },
+            # Placeholder importance lists for GST
+            "GST_High_Importance": [
+                "Taxable Person",
+                "Registration",
+                "Supply",
+                "Input Tax Credit",
+                "Reverse Charge Mechanism",
+                "Exemption",
+                "Place of supply",
+                "Time of Supply",
+                "Valuation"
+            ],
+            "GST_Medium_Importance": [
+                "E-Way Bill",
+                "TDS, TCS",
+                "Invoice",
+                "Manner of Payment"
+            ],
+            "GST_Least_Importance": [
+                "Introduction and Constitution",
+                "Definitions",
+                "Chargeability and Goods & Services",
+                "Filing of Return",
+                "Accounts and Records"
+            ]
         }
     },
     "Group II": {
@@ -111,6 +193,14 @@ data = {
             "Audit of Items of Financial Statements": 6,
             "Internal Audit & SA 610": 1
         },
+        # Placeholder importance lists for Auditing and Ethics
+        "Auditing and Ethics_High_Importance": [
+            "Audit Report (SA 700 / 701 / 705 / 706 / 710), Branch Audit & SA 600, SA 299",
+            "Bank Audit",
+            "Audit of Items of Financial Statements"
+        ],
+        "Auditing and Ethics_Medium_Importance": [],
+        "Auditing and Ethics_Least_Importance": [],
         "Cost and Management Accounting": {
             "Intro to CMA": 3,
             "Material Cost": 7,
@@ -128,6 +218,17 @@ data = {
             "Marginal Costing": 9,
             "Budget and Budgetary Controls": 8
         },
+        # Placeholder importance lists for Cost and Management Accounting
+        "Cost and Management Accounting_High_Importance": [
+            "Material Cost",
+            "Activity Based Costing",
+            "Process and Operation Costing",
+            "Standard Costing",
+            "Marginal Costing",
+            "Budget and Budgetary Controls"
+        ],
+        "Cost and Management Accounting_Medium_Importance": [],
+        "Cost and Management Accounting_Least_Importance": [],
         "FMSM": {
             "FM": {
                 "Scope and Objectives of FM": 1.5,
@@ -140,13 +241,31 @@ data = {
                 "Dividend Decisions": 4,
                 "Management of Working Capital": 4
             },
+            # Placeholder importance lists for FM
+            "FM_High_Importance": [
+                "Ratio Analysis",
+                "Cost of Capital",
+                "Capital Structure",
+                "Leverage",
+                "Investment Decisions- Capital Budgeting",
+                "Management of Working Capital"
+            ],
+            "FM_Medium_Importance": [],
+            "FM_Least_Importance": [],
             "SM": {
                 "Introduction to Strategic Management": 6,
                 "Strategic Analysis: External Environment": 6,
                 "Strategic Analysis: Internal Environment": 6,
                 "Strategic Choices": 7,
                 "Strategy Implementation & Evaluation": 10
-            }
+            },
+            # Placeholder importance lists for SM
+            "SM_High_Importance": [
+                "Strategic Choices",
+                "Strategy Implementation & Evaluation"
+            ],
+            "SM_Medium_Importance": [],
+            "SM_Least_Importance": []
         }
     }
 }
