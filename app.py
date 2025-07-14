@@ -277,11 +277,11 @@ st.title("📘 CA Exam Planner")
 st.markdown("Plan your CA exam revisions based on your time and topic preferences.")
 
 # ---------------------------- User Inputs ----------------------------
-study_hours = st.number_input("🕒 How many hours can you study per day?", min_value=1, max_value=16, value=6)
+study_hours = st.number_input("🕒 How many hours can you study per day?", min_value=1, max_value=16, value=14) # Changed default to 14
 max_subjects_per_day = st.selectbox(
     "🔢 Max number of subjects per day:",
-    [1, 2, 3, 4], # Added more options for flexibility
-    index=0 # Default to 1 subject per day
+    [1, 2, 3, 4], 
+    index=0 # Default to 1 subject per day for "at a stretch" behavior
 )
 
 group_choice = st.radio("🧠 Which Group are you preparing for?", ["Group I", "Group II", "Both Groups"])
@@ -320,7 +320,6 @@ if selected_subjects:
     st.subheader("Subject Revision Order")
     st.info("Drag and drop to arrange the order in which you want to study subjects. This will primarily dictate the sequence of subjects in your plan.")
     
-    # Create a list of (subject_name, order_index) for reordering
     ordered_subjects = st.multiselect(
         "Set your preferred subject order:",
         options=selected_subjects,
@@ -368,7 +367,7 @@ for main_subject in selected_subjects:
                     elif original_chapter_name in least_imp_list:
                         priority_int = 2
                     
-                    all_selected_chapters_with_meta.append((full_ch_key, hours, priority_int, main_subject)) 
+                    all_selected_chapters_with_meta.append((full_ch_key, float(hours), priority_int, main_subject)) 
 
     else: # Direct subjects (e.g., Advance Accounting, Corporate and Other Laws, Auditing, Costing)
         chapter_names_in_main = list(chapters_in_main_subject.keys())
@@ -398,7 +397,7 @@ for main_subject in selected_subjects:
             elif original_chapter_name in least_imp_list:
                 priority_int = 2
             
-            all_selected_chapters_with_meta.append((full_ch_key, hours, priority_int, main_subject)) 
+            all_selected_chapters_with_meta.append((full_ch_key, float(hours), priority_int, main_subject)) 
 
 
 # Organize chapters by subject and then sort within each subject
@@ -430,7 +429,7 @@ def generate_plan(chapters_by_subject_dict, ordered_subjects_list, hours_per_day
         for subject in ordered_subjects_list if subject in chapters_by_subject_dict and chapters_by_subject_dict[subject]
     }
 
-    # Ensure active_ordered_subjects only contains subjects that have chapters
+    # Filter ordered_subjects_list to only include subjects that actually have selected chapters initially
     active_ordered_subjects = [
         s for s in ordered_subjects_list 
         if s in subject_queues and subject_queues[s]
@@ -441,124 +440,106 @@ def generate_plan(chapters_by_subject_dict, ordered_subjects_list, hours_per_day
     while current_day <= end_date and active_ordered_subjects:
         available_time = hours_per_day
         today_topics = []
-        subjects_scheduled_today = set()
+        subjects_scheduled_today_count = 0
         
-        # --- PHASE 1: Try to fill the day with the current primary subject ---
+        # Determine the current primary subject for today based on the ordered list
         current_primary_subject = active_ordered_subjects[subject_index_in_order % len(active_ordered_subjects)]
         
-        # Loop to consume hours for the primary subject
-        while available_time > 0 and subject_queues[current_primary_subject]:
-            chapter_full_name, remaining_ch_time, priority_int = subject_queues[current_primary_subject][0] # Peek
-            
-            if remaining_ch_time <= available_time:
-                # Chapter fits entirely
-                chapter_item = subject_queues[current_primary_subject].popleft()
-                today_topics.append((chapter_item[0], chapter_item[1]))
-                available_time -= chapter_item[1]
-                subjects_scheduled_today.add(current_primary_subject)
-            else:
-                # Chapter needs to be split
-                chapter_item = subject_queues[current_primary_subject].popleft()
-                today_topics.append((f"{chapter_item[0]} (Part)", available_time))
-                # Push the remaining part back to the front of the deque
-                subject_queues[current_primary_subject].appendleft((chapter_item[0], chapter_item[1] - available_time, chapter_item[2]))
-                available_time = 0 # No more time left for today
-                subjects_scheduled_today.add(current_primary_subject)
-        
-        # If the primary subject's queue is now empty, remove it from active list
-        if not subject_queues[current_primary_subject]:
-            active_ordered_subjects.remove(current_primary_subject)
-            # Adjust index if necessary to prevent out-of-bounds if active_ordered_subjects shrinks
-            if subject_index_in_order >= len(active_ordered_subjects) and active_ordered_subjects:
-                subject_index_in_order = 0 # Reset to start if we removed the last one in sequence
-            elif not active_ordered_subjects: # All subjects completed
-                subject_index_in_order = -1 # Indicate no more subjects
-        
-        # --- PHASE 2: Fill remaining hours with other subjects if allowed and necessary ---
-        # This only happens if max_subjects_per_day > 1 AND the primary subject ran out of content for the day
-        if available_time > 0 and len(subjects_scheduled_today) < max_subjects_per_day and active_ordered_subjects:
-            # We need to find the next highest priority chapter from available subjects that fits
-            # We'll iterate through the *remaining* active subjects based on order, then their chapters by priority
-            
-            # Temporary list to hold chapters that are *not* the current primary subject but could be scheduled
-            candidates_for_fill = []
-            for s in active_ordered_subjects:
-                if s != current_primary_subject and subject_queues[s]:
-                    # Append (full_chapter_key, hours, priority_int, subject_name)
-                    # We peek at the first chapter from each of these queues to pick the highest priority one
-                    ch_item = subject_queues[s][0] 
-                    candidates_for_fill.append((ch_item[0], ch_item[1], ch_item[2], s))
-            
-            # Sort candidates by priority (int) then by hours (descending)
-            candidates_for_fill.sort(key=lambda x: (x[2], -x[1]))
+        # --- PHASE 1: Try to fill the day with the current primary subject ---
+        if subject_queues[current_primary_subject]: # Ensure the primary subject still has chapters
+            subjects_scheduled_today_count += 1
+            while available_time > 0 and subject_queues[current_primary_subject]:
+                chapter_full_name, remaining_ch_time, priority_int = subject_queues[current_primary_subject][0] # Peek
 
-            temp_idx = 0
-            while available_time > 0 and len(subjects_scheduled_today) < max_subjects_per_day and temp_idx < len(candidates_for_fill):
-                candidate_ch_full_name, candidate_ch_time, candidate_ch_priority, candidate_ch_subject = candidates_for_fill[temp_idx]
-
-                if candidate_ch_subject not in subjects_scheduled_today and len(subjects_scheduled_today) >= max_subjects_per_day:
-                    temp_idx += 1
-                    continue # Skip this if adding its subject exceeds limit
-
-                if candidate_ch_time <= available_time:
-                    # This chapter fits
-                    # Find and pop from its specific subject queue
-                    # (This is slightly less efficient but ensures removal from correct queue)
-                    actual_chapter_popped = subject_queues[candidate_ch_subject].popleft()
-                    today_topics.append((actual_chapter_popped[0], actual_chapter_popped[1]))
-                    available_time -= actual_chapter_popped[1]
-                    subjects_scheduled_today.add(candidate_ch_subject)
+                if remaining_ch_time <= available_time:
+                    # Chapter fits entirely
+                    chapter_item = subject_queues[current_primary_subject].popleft()
+                    today_topics.append((chapter_item[0], chapter_item[1]))
+                    available_time -= chapter_item[1]
                 else:
                     # Chapter needs to be split
-                    # Find and pop from its specific subject queue
-                    actual_chapter_popped = subject_queues[candidate_ch_subject].popleft()
-                    today_topics.append((f"{actual_chapter_popped[0]} (Part)", available_time))
-                    # Push remaining part back to the front of its deque
-                    subject_queues[candidate_ch_subject].appendleft((actual_chapter_popped[0], actual_chapter_popped[1] - available_time, actual_chapter_popped[2]))
-                    available_time = 0 # Day's time exhausted
-                    subjects_scheduled_today.add(candidate_ch_subject)
+                    chapter_item = subject_queues[current_primary_subject].popleft()
+                    today_topics.append((f"{chapter_item[0]} (Part)", available_time))
+                    # Push the remaining part back to the front of the deque
+                    subject_queues[current_primary_subject].appendleft((chapter_item[0], chapter_item[1] - available_time, chapter_item[2]))
+                    available_time = 0 # No more time left for today
+            
+            # If the primary subject's queue is now empty, remove it from active list
+            if not subject_queues[current_primary_subject]:
+                # Rebuild active_ordered_subjects to remove the completed subject
+                active_ordered_subjects = [s for s in active_ordered_subjects if s != current_primary_subject]
+                # Adjust index if necessary to prevent out-of-bounds
+                if subject_index_in_order >= len(active_ordered_subjects) and active_ordered_subjects:
+                    subject_index_in_order = 0 # Reset to start if we removed the last one in sequence
+                elif not active_ordered_subjects: # All subjects completed
+                    subject_index_in_order = -1 # Indicate no more subjects
+        
+        # --- PHASE 2: Fill remaining hours with other subjects if allowed and necessary ---
+        # This only happens if max_subjects_per_day > 1 AND there's still time left AND there are other active subjects
+        if available_time > 0 and subjects_scheduled_today_count < max_subjects_per_day and active_ordered_subjects:
+            
+            # Find the next subject in the ordered list that still has chapters
+            next_subject_to_consider_idx = (subject_index_in_order % len(active_ordered_subjects)) if subject_index_in_order != -1 else -1
 
-                # If the subject queue for the scheduled candidate is now empty, remove it from active list
-                if not subject_queues[candidate_ch_subject]:
-                    active_ordered_subjects.remove(candidate_ch_subject)
-                    # Re-evaluate candidate list
-                    candidates_for_fill = [
-                        (ch_key, ch_hours, ch_priority, ch_subject) for (ch_key, ch_hours, ch_priority, ch_subject) in candidates_for_fill 
-                        if ch_subject in active_ordered_subjects and subject_queues[ch_subject] # Keep only active subjects
-                    ]
-                    candidates_for_fill.sort(key=lambda x: (x[2], -x[1])) # Re-sort for next pick
-                    temp_idx = 0 # Reset index as list changed
+            while available_time > 0 and subjects_scheduled_today_count < max_subjects_per_day and next_subject_to_consider_idx != -1:
+                
+                # Check all subjects starting from the current subject_index_in_order onwards,
+                # looping back to the beginning if necessary, to find the next available subject.
+                found_next_subject = False
+                temp_subject_to_fill = None
+                initial_check_idx = next_subject_to_consider_idx
+                
+                for _ in range(len(active_ordered_subjects)): # Iterate through all potential subjects once
+                    candidate_subject = active_ordered_subjects[next_subject_to_consider_idx]
+                    
+                    if candidate_subject in subject_queues and subject_queues[candidate_subject]:
+                        # This is a candidate subject with chapters
+                        if subjects_scheduled_today_count < max_subjects_per_day:
+                            temp_subject_to_fill = candidate_subject
+                            found_next_subject = True
+                            break
+                    
+                    next_subject_to_consider_idx = (next_subject_to_consider_idx + 1) % len(active_ordered_subjects)
+                    if next_subject_to_consider_idx == initial_check_idx: # Looped through all
+                        break
+
+                if not found_next_subject:
+                    break # No more subjects to fill from or max subjects reached
+
+                # Now 'temp_subject_to_fill' holds the next subject to schedule from
+                if temp_subject_to_fill and subject_queues[temp_subject_to_fill]:
+                    chapter_full_name, remaining_ch_time, priority_int = subject_queues[temp_subject_to_fill][0] # Peek
+
+                    if remaining_ch_time <= available_time:
+                        chapter_item = subject_queues[temp_subject_to_fill].popleft()
+                        today_topics.append((chapter_item[0], chapter_item[1]))
+                        available_time -= chapter_item[1]
+                        subjects_scheduled_today_count += 1
+                    else:
+                        chapter_item = subject_queues[temp_subject_to_fill].popleft()
+                        today_topics.append((f"{chapter_item[0]} (Part)", available_time))
+                        subject_queues[temp_subject_to_fill].appendleft((chapter_item[0], chapter_item[1] - available_time, chapter_item[2]))
+                        available_time = 0
+                        subjects_scheduled_today_count += 1
+                
+                    # If this subject's queue is now empty, remove it from active list
+                    if not subject_queues[temp_subject_to_fill]:
+                        active_ordered_subjects.remove(temp_subject_to_fill)
+                        if not active_ordered_subjects: # All subjects completed
+                            subject_index_in_order = -1 # Indicate no more subjects
+                            break # Exit inner while loop
+                        # Recalculate next_subject_to_consider_idx after removal
+                        next_subject_to_consider_idx = (subject_index_in_order % len(active_ordered_subjects)) if subject_index_in_order != -1 else -1
                 else:
-                    temp_idx += 1
-
+                    break # No chapters found for the chosen subject or it became empty
 
         plan.append((current_day.strftime("%d-%b-%Y"), today_topics))
         current_day += timedelta(days=1)
-
-        # Only advance the primary subject index if the current one was fully handled for the day
-        # and we haven't already moved to a new subject during phase 2
-        # If the primary subject was exhausted, the next day starts with the next in order.
-        # If it wasn't exhausted, we continue with it tomorrow.
-        if not subject_queues.get(current_primary_subject) or not today_topics or today_topics[-1][0] != f"{current_primary_subject} - {today_topics[-1][0].split(' - ')[-1].replace(' (Part)', '').strip()}":
-             # This check is tricky. It means the primary subject was either completed or split,
-             # but the day was filled with other subjects OR it was left incomplete,
-             # in which case we still want to move to the next in order to balance.
-             # A simpler heuristic for now: always advance to the next primary subject unless
-             # the current one couldn't even start today.
-            subject_index_in_order += 1 
-
-        # Clean up subject_queues (remove subjects that are now empty)
-        # and update active_ordered_subjects
-        remaining_subjects_in_order = []
-        for s in ordered_subjects_list: # Iterate through original ordered list
-            if s in subject_queues and subject_queues[s]: # If subject still has chapters
-                remaining_subjects_in_order.append(s)
-        active_ordered_subjects = remaining_subjects_in_order
         
-        # If all chapters are done, break loop early
+        # If all subjects are completed, stop the main loop
         if not active_ordered_subjects:
             break
-        
+
     # Fill remaining days as free if all chapters are done before end_date
     while current_day <= end_date:
         plan.append((current_day.strftime("%d-%b-%Y"), [])) # Free day
@@ -623,8 +604,8 @@ if st.button("✅ Generate Study Plan"):
             return full_topic.replace(" (Part)", "").strip()
 
         df_export["Topic"] = df_export["FullTopic"].apply(extract_chapter_name)
+        df_export["Estimated Hours"] = pd.to_numeric(df_export["Estimated Hours"]) # Ensure numerical
         df_export = df_export[["Date", "Topic", "Estimated Hours"]]
-        df_export["Estimated Hours"] = pd.to_numeric(df_export["Estimated Hours"])
 
 
         # ---------------------------- Export to Excel ----------------------------
