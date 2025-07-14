@@ -8,7 +8,7 @@ import io
 
 from fpdf import FPDF
 
-from ca_exam_data import data  # Your own module
+from ca_exam_data import data  # Your own module
 
 
 
@@ -36,15 +36,15 @@ group_choice = st.radio("🧠 Which Group are you preparing for?", ["Group I", "
 
 if group_choice == "Group I":
 
-    selected_data = data["Group I"]
+    selected_data = data["Group I"]
 
 elif group_choice == "Group II":
 
-    selected_data = data["Group II"]
+    selected_data = data["Group II"]
 
 else:
 
-    selected_data = {**data["Group I"], **data["Group II"]}
+    selected_data = {**data["Group I"], **data["Group II"]}
 
 
 
@@ -54,11 +54,11 @@ col1, col2 = st.columns(2)
 
 with col1:
 
-    start_date = st.date_input("📅 Revision Start Date", datetime.today())
+    start_date = st.date_input("📅 Revision Start Date", datetime.today())
 
 with col2:
 
-    end_date = st.date_input("🗓️ Revision End Date", datetime.today() + timedelta(days=30))
+    end_date = st.date_input("🗓️ Revision End Date", datetime.today() + timedelta(days=30))
 
 
 
@@ -78,43 +78,43 @@ final_chapter_dict = {}
 
 for subject in selected_subjects:
 
-    chapters = selected_data[subject]
+    chapters = selected_data[subject]
 
-    flat_chapters = {}
-
-
-
-    if any(isinstance(val, dict) for val in chapters.values()):
-
-        for subtopic, subchaps in chapters.items():
-
-            for ch, hr in subchaps.items():
-
-                key = f"{subject} - {subtopic} - {ch}"
-
-                flat_chapters[key] = hr
-
-    else:
-
-        for ch, hr in chapters.items():
-
-            key = f"{subject} - {ch}"
-
-            flat_chapters[key] = hr
+    flat_chapters = {}
 
 
 
-    chapter_names = list(flat_chapters.keys())
+    if any(isinstance(val, dict) for val in chapters.values()):
 
-    select_all = st.checkbox(f"Select all chapters for {subject}")
+        for subtopic, subchaps in chapters.items():
 
-    selected_chapters = st.multiselect(f"📄 Chapters from {subject}", chapter_names, default=chapter_names if select_all else [])
+            for ch, hr in subchaps.items():
+
+                key = f"{subject} - {subtopic} - {ch}"
+
+                flat_chapters[key] = hr
+
+    else:
+
+        for ch, hr in chapters.items():
+
+            key = f"{subject} - {ch}"
+
+            flat_chapters[key] = hr
 
 
 
-    for ch in selected_chapters:
+    chapter_names = list(flat_chapters.keys())
 
-        final_chapter_dict[ch] = flat_chapters[ch]
+    select_all = st.checkbox(f"Select all chapters for {subject}")
+
+    selected_chapters = st.multiselect(f"📄 Chapters from {subject}", chapter_names, default=chapter_names if select_all else [])
+
+
+
+    for ch in selected_chapters:
+
+        final_chapter_dict[ch] = flat_chapters[ch]
 
 
 
@@ -136,47 +136,47 @@ st.markdown(f"### 🧮 Total Selected Hours: `{total_selected_hours}` | Total Av
 
 def generate_plan(chapters, hours_per_day, start_date, end_date):
 
-    plan = []
+    plan = []
 
-    current_day = start_date
+    current_day = start_date
 
-    idx = 0
+    idx = 0
 
-    chapters = list(chapters.items())
+    chapters = list(chapters.items())
 
 
 
-    while current_day <= end_date and idx < len(chapters):
+    while current_day <= end_date and idx < len(chapters):
 
-        available_time = hours_per_day
+        available_time = hours_per_day
 
-        today = []
+        today = []
 
-        while available_time > 0 and idx < len(chapters):
+        while available_time > 0 and idx < len(chapters):
 
-            chapter, ch_time = chapters[idx]
+            chapter, ch_time = chapters[idx]
 
-            if ch_time <= available_time:
+            if ch_time <= available_time:
 
-                today.append((chapter, ch_time))
+                today.append((chapter, ch_time))
 
-                available_time -= ch_time
+                available_time -= ch_time
 
-                idx += 1
+                idx += 1
 
-            else:
+            else:
 
-                today.append((f"{chapter} (Part)", available_time))
+                today.append((f"{chapter} (Part)", available_time))
 
-                chapters[idx] = (chapter, ch_time - available_time)
+                chapters[idx] = (chapter, ch_time - available_time)
 
-                available_time = 0
+                available_time = 0
 
-        plan.append((current_day.strftime("%d-%b-%Y"), today))
+        plan.append((current_day.strftime("%d-%b-%Y"), today))
 
-        current_day += timedelta(days=1)
+        current_day += timedelta(days=1)
 
-    return plan
+    return plan
 
 
 
@@ -184,160 +184,160 @@ def generate_plan(chapters, hours_per_day, start_date, end_date):
 
 if st.button("✅ Generate Study Plan"):
 
-    if start_date >= end_date:
+    if start_date >= end_date:
 
-        st.error("❌ End date must be after start date.")
+        st.error("❌ End date must be after start date.")
 
-    elif not final_chapter_dict:
+    elif not final_chapter_dict:
 
-        st.warning("⚠️ Please select at least one chapter.")
+        st.warning("⚠️ Please select at least one chapter.")
 
-    elif total_selected_hours > total_available_hours:
+    elif total_selected_hours > total_available_hours:
 
-        st.warning("⚠️ Selected content exceeds available time. Please reduce selection or increase study hours/date range.")
+        st.warning("⚠️ Selected content exceeds available time. Please reduce selection or increase study hours/date range.")
 
-    else:
+    else:
 
-        plan = generate_plan(final_chapter_dict, study_hours, start_date, end_date)
+        plan = generate_plan(final_chapter_dict, study_hours, start_date, end_date)
 
 
 
-        st.success("✅ Study Planner Generated!")
+        st.success("✅ Study Planner Generated!")
 
-        export_data = []
+        export_data = []
 
-        for day, topics in plan:
+        for day, topics in plan:
 
-            st.subheader(f"📆 {day}")
+            st.subheader(f"📆 {day}")
 
-            if topics:
+            if topics:
 
-                for topic, hr in topics:
+                for topic, hr in topics:
 
-                    st.markdown(f"- {topic} ({hr} hrs)")
+                    st.markdown(f"- {topic} ({hr} hrs)")
 
-                    export_data.append({"Date": day, "Plan": f"{topic} ({hr} hrs)"})
+                    export_data.append({"Date": day, "Plan": f"{topic} ({hr} hrs)"})
 
-            else:
+            else:
 
-                st.write("🔸 Free / Buffer Day")
+                st.write("🔸 Free / Buffer Day")
 
-                export_data.append({"Date": day, "Plan": "Free / Buffer Day"})
+                export_data.append({"Date": day, "Plan": "Free / Buffer Day"})
 
 
 
-        df_export = pd.DataFrame(export_data)
+        df_export = pd.DataFrame(export_data)
 
 
 
-        # Remove "Free / Buffer Day" rows
+        # Remove "Free / Buffer Day" rows
 
-        df_export = df_export[df_export["Plan"] != "Free / Buffer Day"]
+        df_export = df_export[df_export["Plan"] != "Free / Buffer Day"]
 
 
 
-        # Extract topic and hours
+        # Extract topic and hours
 
-        df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
+        df_export[["FullTopic", "Estimated Hours"]] = df_export["Plan"].str.extract(r'(.*)\((\d+(?:\.\d+)?) hrs\)')
 
-        df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
+        df_export["Topic"] = df_export["FullTopic"].str.extract(r'^[^-]+ - (.*)')
 
-        df_export = df_export[["Date", "Topic", "Estimated Hours"]]
+        df_export = df_export[["Date", "Topic", "Estimated Hours"]]
 
 
 
-        # ---------------------------- Export to Excel ----------------------------
+        # ---------------------------- Export to Excel ----------------------------
 
-        buffer = io.BytesIO()
+        buffer = io.BytesIO()
 
-        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
 
-            df_export.to_excel(writer, index=False, sheet_name='Planner')
+            df_export.to_excel(writer, index=False, sheet_name='Planner')
 
-        st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
+        st.download_button("📥 Download as Excel", data=buffer.getvalue(), file_name="study_plan.xlsx")
 
 
 
-        # ---------------------------- Export to PDF ----------------------------
+        # ---------------------------- Export to PDF ----------------------------
 
-        class PDF(FPDF):
+        class PDF(FPDF):
 
-            def header(self):
+            def header(self):
 
-                self.set_font("Arial", "B", 14)
+                self.set_font("Arial", "B", 14)
 
-                self.cell(0, 10, "CA Exam Planner", 0, 1, "C")
+                self.cell(0, 10, "CA Exam Planner", 0, 1, "C")
 
-                self.ln(5)
+                self.ln(5)
 
 
 
-            def chapter_title(self, title):
+            def chapter_title(self, title):
 
-                self.set_font("Arial", "B", 12)
+                self.set_font("Arial", "B", 12)
 
-                self.cell(0, 10, title, ln=True)
+                self.cell(0, 10, title, ln=True)
 
 
 
-            def chapter_body(self, lines):
+            def chapter_body(self, lines):
 
-                self.set_font("Arial", "", 11)
+                self.set_font("Arial", "", 11)
 
-                for line in lines:
+                for line in lines:
 
-                    self.multi_cell(0, 8, f"- {line}")
+                    self.multi_cell(0, 8, f"- {line}")
 
-                self.ln(3)
+                self.ln(3)
 
 
 
-        pdf = PDF()
+        pdf = PDF()
 
-        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_auto_page_break(auto=True, margin=15)
 
-        pdf.add_page()
+        pdf.add_page()
 
 
 
-        pdf.set_font("Arial", "", 11)
+        pdf.set_font("Arial", "", 11)
 
-        pdf.multi_cell(0, 8, f"Study Hours per Day: {study_hours}")
+        pdf.multi_cell(0, 8, f"Study Hours per Day: {study_hours}")
 
-        pdf.multi_cell(0, 8, f"Revision Period: {start_date.strftime('%d-%b-%Y')} to {end_date.strftime('%d-%b-%Y')}")
+        pdf.multi_cell(0, 8, f"Revision Period: {start_date.strftime('%d-%b-%Y')} to {end_date.strftime('%d-%b-%Y')}")
 
-        pdf.multi_cell(0, 8, f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}")
+        pdf.multi_cell(0, 8, f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}")
 
-        pdf.ln(5)
+        pdf.ln(5)
 
 
 
-        for day, topics in plan:
+        for day, topics in plan:
 
-            pdf.chapter_title(day)
+            pdf.chapter_title(day)
 
-            if topics:
+            if topics:
 
-                lines = [f"{topic} ({hr} hrs)" for topic, hr in topics]
+                lines = [f"{topic} ({hr} hrs)" for topic, hr in topics]
 
-            else:
+            else:
 
-                lines = ["Free / Buffer Day"]
+                lines = ["Free / Buffer Day"]
 
-            pdf.chapter_body(lines)
+            pdf.chapter_body(lines)
 
 
 
-        pdf_output = pdf.output(dest='S').encode('latin1')
+        pdf_output = pdf.output(dest='S').encode('latin1')
 
-        st.download_button(
+        st.download_button(
 
-            label="📄 Download as PDF",
+            label="📄 Download as PDF",
 
-            data=pdf_output,
+            data=pdf_output,
 
-            file_name="study_plan.pdf",
+            file_name="study_plan.pdf",
 
-            mime="application/pdf"
+            mime="application/pdf"
 
-        )
+        )
