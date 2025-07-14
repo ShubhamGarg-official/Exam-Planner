@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import io
 from fpdf import FPDF
+from collections import defaultdict, deque
 
 # Your ca_exam_data.py content goes here, updated with importance lists
 data = {
@@ -104,7 +105,7 @@ data = {
         ],
         "Corporate and Other Laws_Medium_Importance": [],
         "Corporate and Other Laws_Least_Importance": [],
-        "Taxation": {
+        "Taxation": { # This is a meta-subject containing sub-subjects
             "Income Tax": {
                 "Basic Concepts": 2,
                 "Residence & Scope of Total Income": 2,
@@ -201,8 +202,8 @@ data = {
             "Bank Audit",
             "Audit of Items of Financial Statements"
         ],
-        "Auditing and Ethics_Medium_Importance": [], # Add your lists here if applicable
-        "Auditing and Ethics_Least_Importance": [], # Add your lists here if applicable
+        "Auditing and Ethics_Medium_Importance": [],
+        "Auditing and Ethics_Least_Importance": [],
         "Cost and Management Accounting": {
             "Intro to CMA": 3,
             "Material Cost": 7,
@@ -228,8 +229,8 @@ data = {
             "Marginal Costing",
             "Budget and Budgetary Controls"
         ],
-        "Cost and Management Accounting_Medium_Importance": [], # Add your lists here if applicable
-        "Cost and Management Accounting_Least_Importance": [], # Add your lists here if applicable
+        "Cost and Management Accounting_Medium_Importance": [],
+        "Cost and Management Accounting_Least_Importance": [],
         "FMSM": {
             "FM": {
                 "Scope and Objectives of FM": 1.5,
@@ -275,10 +276,14 @@ st.set_page_config(page_title="CA Exam Planner", layout="wide")
 st.title("📘 CA Exam Planner")
 st.markdown("Plan your CA exam revisions based on your time and topic preferences.")
 
-# ---------------------------- Study Hours Per Day ----------------------------
+# ---------------------------- User Inputs ----------------------------
 study_hours = st.number_input("🕒 How many hours can you study per day?", min_value=1, max_value=16, value=6)
+max_subjects_per_day = st.selectbox(
+    "🔢 Max number of subjects per day:",
+    [1, 2, 3, 4], # Added more options for flexibility
+    index=0 # Default to 1 subject per day
+)
 
-# ---------------------------- Group Selection ----------------------------
 group_choice = st.radio("🧠 Which Group are you preparing for?", ["Group I", "Group II", "Both Groups"])
 
 if group_choice == "Group I":
@@ -286,177 +291,178 @@ if group_choice == "Group I":
 elif group_choice == "Group II":
     selected_data = data["Group II"]
 else:
+    # Merge both groups, ensuring keys are distinct if there are overlaps (though unlikely with subject names)
     selected_data = {**data["Group I"], **data["Group II"]}
 
-# ---------------------------- Date Range Inputs ----------------------------
 col1, col2 = st.columns(2)
 with col1:
     start_date = st.date_input("📅 Revision Start Date", datetime.today())
 with col2:
     end_date = st.date_input("🗓️ Revision End Date", datetime.today() + timedelta(days=30))
 
-# ---------------------------- Subject and Chapter Selection ----------------------------
-# Filter out the importance lists keys when displaying subjects for selection
-all_subjects = [s for s in list(selected_data.keys()) if not s.endswith(('_High_Importance', '_Medium_Importance', '_Least_Importance'))]
+
+# ---------------------------- Chapter Selection and Prioritization ----------------------------
+
+# Function to get importance lists from subject data
+def get_importance_lists(subject_data, subject_name):
+    high = subject_data.get(f"{subject_name}_High_Importance", [])
+    medium = subject_data.get(f"{subject_name}_Medium_Importance", [])
+    least = subject_data.get(f"{subject_name}_Least_Importance", [])
+    return high, medium, least
+
+# Collect all possible subjects for multiselect, excluding importance lists
+all_subjects_for_selection = [s for s in list(selected_data.keys()) if not s.endswith(('_High_Importance', '_Medium_Importance', '_Least_Importance'))]
 select_all_subjects = st.checkbox("📚 Select All Subjects")
-selected_subjects = st.multiselect("Choose Subjects", all_subjects, default=all_subjects if select_all_subjects else [])
-
-final_chapter_dict = {} # Stores all selected chapters and their original hours
-# These lists will temporarily hold selected chapters, categorized by their importance level
-selected_high_importance_chapters = []
-selected_medium_importance_chapters = []
-selected_least_importance_chapters = []
-selected_other_chapters = [] # For chapters not explicitly in any importance list
-
-for subject in selected_subjects:
-    chapters_in_subject = selected_data[subject]
-    flat_chapters = {}
-
-    # Get importance lists for the current subject (or sub-subject for nested structures)
-    # Using .get() with an empty list as default to avoid KeyError if no importance list exists
-    subject_high_imp_list = selected_data.get(f"{subject}_High_Importance", [])
-    subject_medium_imp_list = selected_data.get(f"{subject}_Medium_Importance", [])
-    subject_least_imp_list = selected_data.get(f"{subject}_Least_Importance", [])
-
-    if any(isinstance(val, dict) for val in chapters_in_subject.values()):
-        # Handle nested subjects (like "Taxation" -> "Income Tax" / "GST")
-        for subtopic, subchaps in chapters_in_subject.items():
-            if isinstance(subchaps, dict): # Check if it's a sub-subject dictionary
-                # Get importance lists specific to the sub-subject
-                subtopic_high_imp_list = selected_data.get(f"{subtopic}_High_Importance", [])
-                subtopic_medium_imp_list = selected_data.get(f"{subtopic}_Medium_Importance", [])
-                subtopic_least_imp_list = selected_data.get(f"{subtopic}_Least_Importance", [])
-
-                for ch, hr in subchaps.items():
-                    key = f"{subject} - {subtopic} - {ch}"
-                    flat_chapters[key] = hr
-                    # Categorize *all* chapters for potential prioritization later
-                    if ch in subtopic_high_imp_list:
-                        selected_high_importance_chapters.append((key, hr))
-                    elif ch in subtopic_medium_imp_list:
-                        selected_medium_importance_chapters.append((key, hr))
-                    elif ch in subtopic_least_imp_list:
-                        selected_least_importance_chapters.append((key, hr))
-                    else:
-                        selected_other_chapters.append((key, hr))
-            else: # This path might not be taken given the current structure of your 'data'
-                # but it's here for robustness if a subject directly contains a chapter (not a sub-subject)
-                key = f"{subject} - {subtopic}" # Here subtopic is actually chapter name
-                flat_chapters[key] = subchaps # Here subchaps is hours
-                if subtopic in subject_high_imp_list:
-                    selected_high_importance_chapters.append((key, subchaps))
-                elif subtopic in subject_medium_imp_list:
-                    selected_medium_importance_chapters.append((key, subchaps))
-                elif subtopic in subject_least_imp_list:
-                    selected_least_importance_chapters.append((key, subchaps))
-                else:
-                    selected_other_chapters.append((key, subchaps))
-    else:
-        # Handle direct chapters (like "Advance Accounting" or "Corporate and Other Laws")
-        for ch, hr in chapters_in_subject.items():
-            key = f"{subject} - {ch}"
-            flat_chapters[key] = hr
-            # Categorize *all* chapters for potential prioritization later
-            if ch in subject_high_imp_list:
-                selected_high_importance_chapters.append((key, hr))
-            elif ch in subject_medium_imp_list:
-                selected_medium_importance_chapters.append((key, hr))
-            elif ch in subject_least_imp_list:
-                selected_least_importance_chapters.append((key, hr))
-            else:
-                selected_other_chapters.append((key, hr))
-
-    chapter_names = list(flat_chapters.keys())
-    select_all = st.checkbox(f"Select all chapters for {subject}", key=f"select_all_{subject}")
-    selected_chapters_for_subject = st.multiselect(f"📄 Chapters from {subject}", chapter_names, default=chapter_names if select_all else [], key=f"multiselect_{subject}")
-
-    # Populate final_chapter_dict only with chapters ACTUALLY selected by the user
-    for ch_key in selected_chapters_for_subject:
-        final_chapter_dict[ch_key] = flat_chapters[ch_key]
-
-# Filter the previously categorized importance lists to only include chapters that the user *actually selected*
-# This prevents scheduling chapters that were marked important but not chosen by the user
-# And ensures no duplicates across priority lists
-seen_chapters = set()
-
-filtered_high_importance = []
-for ch, hr in selected_high_importance_chapters:
-    if ch in final_chapter_dict and ch not in seen_chapters:
-        filtered_high_importance.append((ch, hr))
-        seen_chapters.add(ch)
-
-filtered_medium_importance = []
-for ch, hr in selected_medium_importance_chapters:
-    if ch in final_chapter_dict and ch not in seen_chapters:
-        filtered_medium_importance.append((ch, hr))
-        seen_chapters.add(ch)
-
-filtered_least_importance = []
-for ch, hr in selected_least_importance_chapters:
-    if ch in final_chapter_dict and ch not in seen_chapters:
-        filtered_least_importance.append((ch, hr))
-        seen_chapters.add(ch)
-
-filtered_other_chapters = []
-for ch, hr in selected_other_chapters:
-    if ch in final_chapter_dict and ch not in seen_chapters:
-        filtered_other_chapters.append((ch, hr))
-        seen_chapters.add(ch)
-
-# Combine all chapters, ordered by priority (High -> Medium -> Least -> Other)
-# Within each priority level, sort by hours (descending) as a secondary sorting criterion
-prioritized_chapters_list = sorted(filtered_high_importance, key=lambda x: x[1], reverse=True) + \
-                           sorted(filtered_medium_importance, key=lambda x: x[1], reverse=True) + \
-                           sorted(filtered_least_importance, key=lambda x: x[1], reverse=True) + \
-                           sorted(filtered_other_chapters, key=lambda x: x[1], reverse=True)
-
-# Create an OrderedDict or just use this list directly for plan generation.
-# For generate_plan to work sequentially, a list of tuples is more direct.
-# The previous `final_chapter_dict_prioritized` was a dictionary, but now
-# the `prioritized_chapters_list` will directly control the order.
+selected_subjects = st.multiselect("Choose Subjects", all_subjects_for_selection, default=all_subjects_for_selection if select_all_subjects else [])
 
 
-# ---------------------------- Display Totals ----------------------------
-# Calculate total selected hours from the user's actual selections (final_chapter_dict)
-total_selected_hours = sum(final_chapter_dict.values())
+# Stores all selected chapters with their original hours, full path, and subject name
+all_selected_chapters_with_meta = [] # (full_chapter_key, hours, subject_name_for_planner)
+
+# Iterate through selected subjects to get their chapters and assign importance
+for main_subject in selected_subjects:
+    chapters_in_main_subject = selected_data[main_subject]
+
+    # Handle subjects that contain sub-subjects (like Taxation, FMSM)
+    if any(isinstance(val, dict) for val in chapters_in_main_subject.values()):
+        st.subheader(f"Chapters for {main_subject}")
+        for sub_subject, sub_chapters_or_lists in chapters_in_main_subject.items():
+            if isinstance(sub_chapters_or_lists, dict): # It's a sub-subject (e.g., Income Tax, GST, FM, SM)
+                chapter_names_for_multiselect = [f"{main_subject} - {sub_subject} - {ch}" for ch in sub_chapters_or_lists.keys()]
+                select_all_sub = st.checkbox(f"Select all chapters for {sub_subject}", key=f"select_all_{main_subject}_{sub_subject}")
+                selected_chapters_from_sub = st.multiselect(
+                    f"📄 Chapters from {main_subject} - {sub_subject}",
+                    chapter_names_for_multiselect,
+                    default=chapter_names_for_multiselect if select_all_sub else [],
+                    key=f"multiselect_{main_subject}_{sub_subject}"
+                )
+                
+                high_imp_list, medium_imp_list, least_imp_list = get_importance_lists(chapters_in_main_subject, sub_subject)
+
+                for full_ch_key in selected_chapters_from_sub:
+                    # Extract original chapter name for importance lookup
+                    original_chapter_name = full_ch_key.split(' - ')[-1]
+                    hours = sub_chapters_or_lists[original_chapter_name]
+                    
+                    priority = 'Other' # Default priority
+                    if original_chapter_name in high_imp_list:
+                        priority = 'High'
+                    elif original_chapter_name in medium_imp_list:
+                        priority = 'Medium'
+                    elif original_chapter_name in least_imp_list:
+                        priority = 'Least'
+                    
+                    all_selected_chapters_with_meta.append((full_ch_key, hours, priority, main_subject)) # Store main_subject as the subject for daily limits
+
+    else: # Direct subjects (e.g., Advance Accounting, Corporate and Other Laws, Auditing, Costing)
+        chapter_names_for_multiselect = list(chapters_in_main_subject.keys())
+        full_keys_for_multiselect = [f"{main_subject} - {ch}" for ch in chapter_names_for_multiselect]
+
+        st.subheader(f"Chapters for {main_subject}")
+        select_all_main = st.checkbox(f"Select all chapters for {main_subject}", key=f"select_all_{main_subject}")
+        selected_chapters_from_main = st.multiselect(
+            f"📄 Chapters from {main_subject}",
+            full_keys_for_multiselect,
+            default=full_keys_for_multiselect if select_all_main else [],
+            key=f"multiselect_{main_subject}"
+        )
+
+        high_imp_list, medium_imp_list, least_imp_list = get_importance_lists(selected_data, main_subject)
+
+        for full_ch_key in selected_chapters_from_main:
+            original_chapter_name = full_ch_key.split(' - ')[-1]
+            hours = chapters_in_main_subject[original_chapter_name]
+
+            priority = 'Other'
+            if original_chapter_name in high_imp_list:
+                priority = 'High'
+            elif original_chapter_name in medium_imp_list:
+                priority = 'Medium'
+            elif original_chapter_name in least_imp_list:
+                priority = 'Least'
+            
+            all_selected_chapters_with_meta.append((full_ch_key, hours, priority, main_subject)) # Store main_subject as the subject for daily limits
+
+
+# Sort all selected chapters by priority and then by hours (descending)
+priority_order = {'High': 0, 'Medium': 1, 'Least': 2, 'Other': 3}
+all_selected_chapters_with_meta.sort(key=lambda x: (priority_order[x[2]], -x[1]))
+
+
+total_selected_hours = sum(ch[1] for ch in all_selected_chapters_with_meta)
 total_days = (end_date - start_date).days + 1
 total_available_hours = total_days * study_hours
 
 st.markdown(f"### 🧮 Total Selected Hours: `{total_selected_hours}` | Total Available Hours: `{total_available_hours}`")
 
-# ---------------------------- Generate Plan ----------------------------
-# The generate_plan function now takes the pre-prioritized list of chapters
-def generate_plan(chapters_to_schedule_list, hours_per_day, start_date, end_date):
+
+# ---------------------------- Generate Plan Function (Updated) ----------------------------
+def generate_plan(chapters_list_with_meta, hours_per_day, start_date, end_date, max_subjects_per_day):
     plan = []
     current_day = start_date
-    
-    idx = 0
 
+    # Use deque for efficient pop/append from either end
+    chapters_queue = deque(chapters_list_with_meta)
+    
     while current_day <= end_date:
         available_time = hours_per_day
         today_topics = []
+        subjects_today = set()
         
-        while available_time > 0 and idx < len(chapters_to_schedule_list):
-            chapter_name, ch_time = chapters_to_schedule_list[idx]
+        # Temporary storage for chapters that couldn't be scheduled today
+        # We need to preserve the priority, so we'll re-insert them at the front
+        # of the queue if they are higher priority than what's being picked from the end.
+        temp_unscheduled = deque() 
 
-            if ch_time <= available_time:
-                # Chapter fits entirely
-                today_topics.append((chapter_name, ch_time))
-                available_time -= ch_time
-                idx += 1
+        # First pass: try to schedule chapters from the front of the queue (highest priority)
+        # while respecting max_subjects_per_day
+        initial_queue_size = len(chapters_queue)
+        temp_idx = 0 # To iterate safely on a deque
+        while available_time > 0 and temp_idx < initial_queue_size:
+            if not chapters_queue: # Ensure queue isn't empty after pops
+                break
+
+            chapter_full_name, remaining_ch_time, priority, subject_name = chapters_queue[0] # Peek at the first
+            
+            if subject_name not in subjects_today and len(subjects_today) >= max_subjects_per_day:
+                # If we've reached subject limit for today and this is a new subject,
+                # move this chapter to a temporary holding and try other chapters from
+                # already scheduled subjects.
+                temp_unscheduled.append(chapters_queue.popleft())
+                initial_queue_size -= 1 # Decrement initial_queue_size as item is removed
+                continue # Try next chapter in the original queue
+
+            # If chapter can fit entirely
+            if remaining_ch_time <= available_time:
+                chapter_item = chapters_queue.popleft() # Pop the chapter
+                today_topics.append((chapter_item[0], chapter_item[1]))
+                available_time -= chapter_item[1]
+                subjects_today.add(chapter_item[3]) # Add subject to today's list
+                initial_queue_size -= 1
             else:
                 # Chapter needs to be split
-                today_topics.append((f"{chapter_name} (Part)", available_time))
-                # Update the remaining time for the current chapter in the list
-                chapters_to_schedule_list[idx] = (chapter_name, ch_time - available_time)
+                chapter_item = chapters_queue.popleft() # Pop the chapter
+                today_topics.append((f"{chapter_item[0]} (Part)", available_time))
+                # Push the remaining part back to the front of the queue
+                chapters_queue.appendleft((chapter_item[0], chapter_item[1] - available_time, chapter_item[2], chapter_item[3]))
                 available_time = 0 # No more time left for today
+                subjects_today.add(chapter_item[3]) # Add subject to today's list
+            
+            temp_idx += 1 # Advance temp_idx only if we processed a chapter from the front of queue
+
+
+        # Re-add temporarily unscheduled chapters back to the queue (at their original priority position)
+        # This is a simplification; a more robust solution might re-sort the queue after each day
+        # or use a priority queue structure. For now, we'll append to the right and assume
+        # sorting at the start is dominant.
+        chapters_queue.extend(temp_unscheduled)
 
         plan.append((current_day.strftime("%d-%b-%Y"), today_topics))
         current_day += timedelta(days=1)
     
-    # Handle any remaining chapters if end_date is reached but not all chapters are covered
-    if idx < len(chapters_to_schedule_list):
-        remaining_hours_uncovered = sum(t for _, t in chapters_to_schedule_list[idx:])
+    # Check for remaining chapters after the end date
+    if chapters_queue:
+        remaining_hours_uncovered = sum(t[1] for t in chapters_queue)
         st.warning(f"Note: Not all selected chapters could be scheduled within the given date range. Remaining hours: {remaining_hours_uncovered:.2f}")
 
     return plan
@@ -466,13 +472,13 @@ def generate_plan(chapters_to_schedule_list, hours_per_day, start_date, end_date
 if st.button("✅ Generate Study Plan"):
     if start_date >= end_date:
         st.error("❌ End date must be after start date.")
-    elif not prioritized_chapters_list: # Check if the prioritized list is empty
+    elif not all_selected_chapters_with_meta:
         st.warning("⚠️ Please select at least one chapter.")
     elif total_selected_hours > total_available_hours:
         st.warning("⚠️ Selected content exceeds available time. Please reduce selection or increase study hours/date range.")
     else:
         # Pass the pre-prioritized list to the generate_plan function
-        plan = generate_plan(prioritized_chapters_list, study_hours, start_date, end_date)
+        plan = generate_plan(list(all_selected_chapters_with_meta), study_hours, start_date, end_date, max_subjects_per_day)
 
         st.success("✅ Study Planner Generated!")
         export_data = []
@@ -498,8 +504,10 @@ if st.button("✅ Generate Study Plan"):
         # Further refine 'Topic' to just the chapter name, removing subject/subtopic prefixes
         def extract_chapter_name(full_topic):
             parts = full_topic.split(' - ')
+            # If it's "Subj - Subsubj - Chapter" or "Subj - Chapter", take the last part
             if len(parts) > 1:
-                return parts[-1].replace(" (Part)", "").strip() # Also remove "(Part)"
+                return parts[-1].replace(" (Part)", "").strip()
+            # If it's just "Chapter" (unlikely with current naming but for safety)
             return full_topic.replace(" (Part)", "").strip()
 
         df_export["Topic"] = df_export["FullTopic"].apply(extract_chapter_name)
@@ -537,6 +545,7 @@ if st.button("✅ Generate Study Plan"):
 
         pdf.set_font("Arial", "", 11)
         pdf.multi_cell(0, 8, f"Study Hours per Day: {study_hours}")
+        pdf.multi_cell(0, 8, f"Max Subjects per Day: {max_subjects_per_day}")
         pdf.multi_cell(0, 8, f"Revision Period: {start_date.strftime('%d-%b-%Y')} to {end_date.strftime('%d-%b-%Y')}")
         pdf.multi_cell(0, 8, f"Total Selected Hours: {total_selected_hours} | Total Available Hours: {total_available_hours}")
         pdf.ln(5)
